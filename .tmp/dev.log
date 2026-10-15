@@ -1,0 +1,83 @@
+$ vite dev -- --host 127.0.0.1 --port 5173
+10:46:53 [vite] (ssr) connected.
+
+  VITE v8.3.4  ready in 687 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+200 GET /emprendimientos
+200 GET /emprendimientos/colmena-viva
+200 GET /catalogo
+200 GET /emprendimientos
+200 GET /
+304 GET /emprendimientos
+200 GET /emprendimientos?q=miel
+200 GET /emprendimientos?q=caf%C3%A9
+200 GET /emprendimientos/no-existe-xyz
+10:48:42 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte
+10:48:42 [vite] (ssr) page reload src/lib/services/api/api.service.ts
+10:48:42 [vite] (ssr) program reload
+10:48:46 [vite] (client) hmr update /src/routes/(app)/emprendimientos/+page.svelte
+10:48:46 [vite] (ssr) page reload src/routes/(app)/emprendimientos/+page.svelte
+10:48:46 [vite] (ssr) program reload
+10:48:50 [vite-plugin-svelte] src/routes/(app)/emprendimientos/[slug]/+page.svelte:271:1 Unused CSS selector ".tag.slug"
+https://svelte.dev/e/css_unused_selector
+10:48:50 [vite] (client) hmr update /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte?svelte&type=style&lang.css
+10:48:50 [vite] (ssr) page reload src/routes/(app)/emprendimientos/[slug]/+page.svelte
+10:48:50 [vite-plugin-svelte] src/routes/(app)/emprendimientos/[slug]/+page.svelte:271:1 Unused CSS selector ".tag.slug"
+https://svelte.dev/e/css_unused_selector
+10:48:57 [vite] (client) hmr update /src/routes/(app)/emprendimientos/[slug]/+page.svelte?svelte&type=style&lang.css
+10:48:57 [vite] (ssr) page reload src/routes/(app)/emprendimientos/[slug]/+page.svelte
+200 GET /emprendimientos/taller-manos-del-rio
+304 GET /emprendimientos?q=caf%C3%A9
+304 GET /emprendimientos
+10:49:39 [vite] (client) hmr update /src/routes/(app)/emprendimientos/+page.svelte
+10:49:39 [vite] (ssr) page reload src/routes/(app)/emprendimientos/+page.svelte
+10:49:39 [vite] (ssr) program reload
+10:49:42 [vite] (client) hmr update /src/routes/(app)/emprendimientos/+page.svelte?svelte&type=style&lang.css
+10:49:42 [vite] (ssr) page reload src/routes/(app)/emprendimientos/+page.svelte
+10:49:42 [vite] (ssr) program reload
+200 GET /catalogo
+200 GET /emprendimientos
+200 GET /emprendimientos
+304 GET /emprendimientos
+200 GET /emprendimientos
+10:52:35 [vite] (client) page reload static/_logo-check.html
+404 GET /favicon.ico
+304 GET /emprendimientos
+10:54:07 [vite] (client) page reload static/_logo-check.html
+200 GET /emprendimientos/colmena-viva
+10:55:12 [vite] (client) hmr update /src/routes/(app)/catalogo/+page.svelte, /src/routes/(app)/catalogo/+page.svelte?svelte&type=style&lang.css
+10:55:12 [vite] (ssr) page reload src/routes/(app)/catalogo/+page.svelte
+10:55:12 [vite] (ssr) program reload
+200 GET /catalogo
+11:00:09 [vite] (client) page reload static/_reuse-check.html
+404 GET /favicon.ico
+11:03:52 [vite] (client) page reload static/_reuse-check.html
+200 GET /catalogo?categoria=artesania
+304 GET /emprendimientos/taller-manos-del-rio
+200 GET /emprendimientos/manos-circulares
+11:12:30 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/dashboard/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/catalogo/+page.svelte, /src/routes/+page.svelte
+11:12:30 [vite] (ssr) page reload src/lib/services/auth/auth.service.ts
+11:12:30 [vite] (ssr) program reload
+11:12:46 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/dashboard/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/catalogo/+page.svelte
+11:12:46 [vite] (ssr) page reload src/lib/services/api/api.service.ts
+11:12:46 [vite] (ssr) program reload
+11:14:31 [vite] (client) page reload .svelte-kit/generated/dev/client/app.js
+304 GET /emprendimientos/manos-circulares
+200 GET /dashboard
+11:20:00 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/dashboard/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/catalogo/+page.svelte
+11:20:00 [vite] (ssr) page reload src/lib/services/api/api.service.ts
+11:20:00 [vite] (ssr) program reload
+200 GET /elegir-rol
+304 GET /elegir-rol
+11:23:57 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/dashboard/+page.svelte, /src/routes/elegir-rol/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/catalogo/+page.svelte
+11:23:57 [vite] (ssr) page reload src/lib/services/api/api.service.ts
+11:23:57 [vite] (ssr) program reload
+11:24:37 [vite] (client) hmr update /src/routes/(app)/dashboard/+page.svelte
+11:24:37 [vite] (ssr) page reload src/routes/(app)/dashboard/+page.svelte
+11:24:37 [vite] (ssr) program reload
+304 GET /dashboard
+304 GET /elegir-rol
+304 GET /elegir-rol
+200 GET /registro

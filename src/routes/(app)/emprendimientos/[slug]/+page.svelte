@@ -86,13 +86,18 @@
 				<p class="socio-desc">{toPlainText(socio.description, 400)}</p>
 			{/if}
 
-			{#if socio.slug || socio.status}
+			{#if socio.status || socio.contactEmail || socio.contactPhone}
 				<div class="socio-tags">
 					{#if socio.status}
 						<span class="tag">{socio.status === 'aprobado' ? 'Verificado' : socio.status}</span>
 					{/if}
-					{#if socio.slug}
-						<span class="tag slug">/{socio.slug}</span>
+					{#if socio.contactEmail}
+						<a class="tag" href={`mailto:${socio.contactEmail}`}>{socio.contactEmail}</a>
+					{/if}
+					{#if socio.contactPhone}
+						<a class="tag" href={`tel:${socio.contactPhone.replace(/[^+\d]/g, '')}`}>
+							{socio.contactPhone}
+						</a>
 					{/if}
 				</div>
 			{/if}
@@ -255,17 +260,19 @@
 	}
 
 	.tag {
+		display: inline-flex;
+		align-items: center;
 		padding: 5px 12px;
 		border-radius: 999px;
 		background: rgb(255 255 255 / 16%);
 		color: #e4f0e2;
 		font-size: 11px;
 		font-weight: 650;
+		text-decoration: none;
 	}
 
-	.tag.slug {
-		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-		font-weight: 500;
+	a.tag:hover {
+		background: rgb(255 255 255 / 26%);
 	}
 
 	.panel {

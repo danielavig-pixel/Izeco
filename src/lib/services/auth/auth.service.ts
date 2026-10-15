@@ -106,13 +106,14 @@ function hasVerificationPending(payload: unknown): boolean {
 	);
 }
 
+// El rol no se pide en el registro: se elige despues, en /elegir-rol, con
+// updateMyRole(). Sin rol, la API asigna "comprador" por defecto.
 export async function register(
 	name: string,
 	email: string,
-	password: string,
-	role: RegisterRole
+	password: string
 ): Promise<{ requiresVerification: boolean }> {
-	const payload = await postAuthRequest('/register', { name, email, password, role });
+	const payload = await postAuthRequest('/register', { name, email, password });
 
 	if (storeAccessToken(payload)) {
 		return { requiresVerification: false };

@@ -111,6 +111,8 @@ export interface Entrepreneur {
 	description: string;
 	category: string;
 	logoUrl: string;
+	contactPhone: string;
+	contactEmail: string;
 	status: string;
 	createdAt: string | null;
 }
@@ -329,6 +331,8 @@ function normalizeEntrepreneur(raw: unknown): Entrepreneur | null {
 		description: pickString(raw, ['description', 'summary']),
 		category: pickString(raw, ['category', 'categoryName']),
 		logoUrl: pickString(raw, ['logoUrl', 'logo', 'imageUrl']),
+		contactPhone: pickString(raw, ['contactPhone', 'contact_phone', 'phone']),
+		contactEmail: pickString(raw, ['contactEmail', 'contact_email', 'email']),
 		status: pickString(raw, ['status', 'state']).toLowerCase(),
 		createdAt: pickDate(raw, ['createdAt', 'created_at'])
 	};
@@ -455,6 +459,17 @@ function query(params: Record<string, string | number | undefined>): string {
 
 export async function getMyProfile(): Promise<UserProfile> {
 	const payload = await apiRequest('/users/me');
+	const profile = normalizeUser(payload);
+	if (!profile) throw new ApiServiceError('No se pudo leer tu perfil.');
+	return profile;
+}
+
+/**
+ * Elige el rol con el que quiero usar la plataforma. La API solo acepta
+ * comprador, emprendedor o voluntario (nunca admin).
+ */
+export async function updateMyRole(role: string): Promise<UserProfile> {
+	const payload = await apiRequest('/users/me', { method: 'PATCH', body: { role } });
 	const profile = normalizeUser(payload);
 	if (!profile) throw new ApiServiceError('No se pudo leer tu perfil.');
 	return profile;

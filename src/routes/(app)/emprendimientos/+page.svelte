@@ -129,8 +129,9 @@
 		<p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>Comunidad Izeco</p>
 		<h1>Conoce a los socios</h1>
 		<p class="subtitle">
-			{total} {total === 1 ? 'emprendimiento' : 'emprendimientos'} que convierten su oficio en
-			impacto para la comunidad.
+			{total}
+			{total === 1 ? 'emprendimiento que convierte' : 'emprendimientos que convierten'} su oficio
+			en impacto para la comunidad.
 		</p>
 	</div>
 
@@ -210,10 +211,11 @@
 
 				<footer class="ecard-foot">
 					<span class="ecard-since">
-						<svg viewBox="0 0 24 24" aria-hidden="true"
-							><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg
-						>
-						Socios de Izeco
+						<svg viewBox="0 0 24 24" aria-hidden="true">
+							<path d="M12 21c0-6 0-9 8-12 0 8-3 11-8 12Z" />
+							<path d="M12 21C12 14 10 9 4 6c-1 7 2 12 8 15Z" />
+						</svg>
+						{socio.status === 'aprobado' ? 'Socio verificado' : 'Socio de Izeco'}
 					</span>
 					<a class="ecard-link" href={`/emprendimientos/${socio.slug}`}>
 						Ver ficha
@@ -491,7 +493,7 @@
 		width: 15px;
 		height: 15px;
 		fill: none;
-		stroke: currentColor;
+		stroke: var(--iz-green-600);
 		stroke-linecap: round;
 		stroke-linejoin: round;
 		stroke-width: 1.5;

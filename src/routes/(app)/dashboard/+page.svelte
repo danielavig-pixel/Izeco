@@ -57,8 +57,9 @@
 
 		const [paymentsResult, signupsResult, notificationsResult, productsResult, volunteerResult] =
 			await Promise.allSettled([
-				getMyPayments({ limit: 100 }),
-				getMyVolunteerSignups({ limit: 100 }),
+				// La API rechaza limit > 50 (400), asi que el panel pide el maximo permitido.
+				getMyPayments({ limit: 50 }),
+				getMyVolunteerSignups({ limit: 50 }),
 				getMyNotifications({ limit: 3 }),
 				getPublicProducts({ limit: 3 }),
 				getPublicVolunteerActivities({ limit: 3 })

@@ -3,15 +3,13 @@
 	import {
 		AuthServiceError,
 		register,
-		saveRegistrationVerificationEmail,
-		type RegisterRole
+		saveRegistrationVerificationEmail
 	} from '../../lib/services/auth/auth.service.js';
 
 	let name = $state('');
 	let email = $state('');
 	let password = $state('');
 	let confirmPassword = $state('');
-	let role = $state<RegisterRole>('emprendedor');
 	let showPassword = $state(false);
 	let showConfirmPassword = $state(false);
 	let isSubmitting = $state(false);
@@ -33,12 +31,13 @@
 
 		isSubmitting = true;
 		try {
-			const result = await register(name.trim(), email, password, role);
+			// El rol se elige despues de crear la cuenta, en /elegir-rol.
+			const result = await register(name.trim(), email, password);
 			if (result.requiresVerification) {
 				saveRegistrationVerificationEmail(email);
 				await goto('/verificar-correo');
 			} else {
-				await goto('/dashboard');
+				await goto('/elegir-rol');
 			}
 		} catch (error) {
 			errorMessage =
@@ -86,7 +85,7 @@
 
 		<header class="card-heading">
 			<h1 id="register-title">Crear cuenta</h1>
-			<p>Empieza tu camino con nosotros.<br />Completa tus datos para registrarte.</p>
+			<p>Empieza tu camino con nosotros.<br />En el siguiente paso eliges cómo usar la plataforma.</p>
 		</header>
 
 		<form onsubmit={handleRegister}>
@@ -127,24 +126,6 @@
 					bind:value={email}
 					required
 				/>
-			</div>
-
-			<label for="role">¿Cómo quieres usar la plataforma?</label>
-			<div class="input-wrap select-wrap">
-				<svg class="field-icon" viewBox="0 0 20 20" aria-hidden="true">
-					<path
-						d="M10 10a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Zm0 1.6c-3.2 0-5.8 1.8-5.8 4v1.2c0 .5.4.9.9.9h9.8c.5 0 .9-.4.9-.9V15.6c0-2.2-2.6-4-5.8-4Z"
-						fill="currentColor"
-					/>
-				</svg>
-				<select id="role" name="role" bind:value={role}>
-					<option value="emprendedor">Soy emprendedor/a</option>
-					<option value="comprador">Quiero comprar productos</option>
-					<option value="voluntario">Quiero ser voluntario/a</option>
-				</select>
-				<svg class="select-chevron" viewBox="0 0 20 20" aria-hidden="true">
-					<path d="m5 8 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-				</svg>
 			</div>
 
 			<label for="password">Contraseña</label>
@@ -364,8 +345,7 @@
 		height: 15px;
 	}
 
-	input,
-	select {
+	input {
 		width: 100%;
 		min-width: 0;
 		height: 100%;
@@ -381,21 +361,6 @@
 	input::placeholder {
 		color: #8b9891;
 		opacity: 1;
-	}
-
-	select {
-		padding-right: 26px;
-		cursor: pointer;
-		appearance: none;
-	}
-
-	.select-chevron {
-		position: absolute;
-		right: 9px;
-		width: 13px;
-		height: 13px;
-		pointer-events: none;
-		color: #64756d;
 	}
 
 	.visibility-toggle {

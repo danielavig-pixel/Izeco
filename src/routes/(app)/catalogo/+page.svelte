@@ -30,6 +30,8 @@
 	let totalPages = $state(1);
 	// Hasta tener el mapeo slug -> id no se puede filtrar por categoría.
 	let referenceReady = $state(false);
+	// Si el logo del socio destacado no responde, se muestran las iniciales.
+	let featuredLogoFailed = $state(false);
 
 	// slug -> id de categoria, para poder filtrar desde la URL.
 	let categoryIdBySlug = new Map<string, string>();
@@ -233,7 +235,16 @@
 
 {#if featured}
 	<article class="socio">
-		<span class="socio-avatar" aria-hidden="true">{initials(featured.name)}</span>
+		{#if featured.logoUrl && !featuredLogoFailed}
+			<img
+				class="socio-avatar"
+				src={featured.logoUrl}
+				alt=""
+				onerror={() => (featuredLogoFailed = true)}
+			/>
+		{:else}
+			<span class="socio-avatar" aria-hidden="true">{initials(featured.name)}</span>
+		{/if}
 		<div class="socio-id">
 			<p class="socio-eyebrow">
 				Socio destacado{featured.category ? ` · ${featured.category}` : ''}
@@ -578,6 +589,10 @@
 		color: #6a5b3e;
 		font-size: 15px;
 		font-weight: 700;
+	}
+
+	img.socio-avatar {
+		object-fit: cover;
 	}
 
 	.socio-id {

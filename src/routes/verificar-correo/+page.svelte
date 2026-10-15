@@ -120,7 +120,8 @@
 		try {
 			await verifyRegistrationEmail(email, code);
 			clearRegistrationVerificationEmail();
-			await goto('/dashboard');
+			// Cuenta recien verificada: falta elegir como quiere usar la plataforma.
+			await goto('/elegir-rol');
 		} catch (error) {
 			errorMessage =
 				error instanceof AuthServiceError
