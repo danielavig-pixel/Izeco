@@ -64,8 +64,11 @@ export interface Product {
 	description: string;
 	priceCents: number;
 	currencyCode: string;
+	categoryId: string;
 	categoryName: string;
+	entrepreneurId: string;
 	entrepreneurName: string;
+	stock: number | null;
 	imageUrl: string;
 	slug: string;
 }
@@ -86,6 +89,30 @@ export interface VolunteerSignup {
 	status: string;
 	createdAt: string | null;
 	activity: VolunteerActivity | null;
+}
+
+export interface CategoryCount {
+	categoryId: string;
+	name: string;
+	products: number;
+}
+
+export interface CategoryNode {
+	id: string;
+	name: string;
+	slug: string;
+	children: CategoryNode[];
+}
+
+export interface Entrepreneur {
+	id: string;
+	name: string;
+	slug: string;
+	description: string;
+	category: string;
+	logoUrl: string;
+	status: string;
+	createdAt: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -237,6 +264,9 @@ function normalizeProduct(raw: unknown): Product | null {
 		description: pickString(raw, ['description', 'summary']),
 		priceCents: pickNumber(raw, ['priceCents', 'price_cents', 'price']),
 		currencyCode: pickString(raw, ['currencyCode', 'currency_code', 'currency']) || 'COP',
+		categoryId: pickString(raw, ['categoryId', 'category_id']),
+		entrepreneurId: pickString(raw, ['entrepreneurId', 'entrepreneur_id']),
+		stock: isRecord(raw) && 'stock' in raw && typeof raw.stock === 'number' ? raw.stock : null,
 		categoryName:
 			pickString(category, ['name', 'title']) || pickString(raw, ['categoryName', 'category']),
 		entrepreneurName:
@@ -261,6 +291,46 @@ function normalizeVolunteer(raw: unknown): VolunteerActivity | null {
 		endsAt: pickDate(raw, ['endsAt', 'endAt', 'endDate']),
 		imageUrl: firstImage(raw),
 		status: pickString(raw, ['status', 'state']).toLowerCase()
+	};
+}
+
+function normalizeCategoryCount(raw: unknown): CategoryCount | null {
+	if (!isRecord(raw)) return null;
+	const categoryId = pickString(raw, ['categoryId', 'id', 'category_id']);
+	const name = pickString(raw, ['name', 'categoryName']);
+	if (!categoryId && !name) return null;
+	return { categoryId, name, products: pickNumber(raw, ['products', 'count', 'total']) };
+}
+
+function normalizeCategoryNode(raw: unknown): CategoryNode | null {
+	if (!isRecord(raw)) return null;
+	const id = pickString(raw, ['id', 'categoryId']);
+	const name = pickString(raw, ['name']);
+	if (!id && !name) return null;
+	const rawChildren = Array.isArray(raw.children) ? raw.children : [];
+	return {
+		id,
+		name,
+		slug: pickString(raw, ['slug']),
+		children: rawChildren
+			.map(normalizeCategoryNode)
+			.filter((child): child is CategoryNode => child !== null)
+	};
+}
+
+function normalizeEntrepreneur(raw: unknown): Entrepreneur | null {
+	if (!isRecord(raw)) return null;
+	const name = pickString(raw, ['name', 'businessName', 'title']);
+	if (!name) return null;
+	return {
+		id: pickString(raw, ['id', 'entrepreneurId']),
+		name,
+		slug: pickString(raw, ['slug']),
+		description: pickString(raw, ['description', 'summary']),
+		category: pickString(raw, ['category', 'categoryName']),
+		logoUrl: pickString(raw, ['logoUrl', 'logo', 'imageUrl']),
+		status: pickString(raw, ['status', 'state']).toLowerCase(),
+		createdAt: pickDate(raw, ['createdAt', 'created_at'])
 	};
 }
 
@@ -430,7 +500,13 @@ export async function markNotificationRead(id: string): Promise<void> {
 }
 
 export async function getPublicProducts(
-	params: { page?: number; limit?: number; q?: string; categoryId?: string } = {}
+	params: {
+		page?: number;
+		limit?: number;
+		q?: string;
+		categoryId?: string;
+		entrepreneurId?: string;
+	} = {}
 ): Promise<Paginated<Product>> {
 	const payload = await apiRequest(`/products/public${query(params)}`, { auth: false });
 	return toPage(payload, normalizeProduct);
@@ -441,4 +517,43 @@ export async function getPublicVolunteerActivities(
 ): Promise<Paginated<VolunteerActivity>> {
 	const payload = await apiRequest(`/volunteer/public${query(params)}`, { auth: false });
 	return toPage(payload, normalizeVolunteer);
+}
+
+export async function getProductCategoryTree(): Promise<CategoryNode[]> {
+	const payload = await apiRequest('/product-categories/public/tree', { auth: false });
+	const rawItems = Array.isArray(payload)
+		? payload
+		: isRecord(payload) && Array.isArray(payload.items)
+			? payload.items
+			: [];
+	return rawItems.map(normalizeCategoryNode).filter((node): node is CategoryNode => node !== null);
+}
+
+export async function getCategoryCounts(): Promise<CategoryCount[]> {
+	const payload = await apiRequest('/product-categories/public/counts', { auth: false });
+	const rawItems = Array.isArray(payload)
+		? payload
+		: isRecord(payload) && Array.isArray(payload.items)
+			? payload.items
+			: [];
+	return rawItems
+		.map(normalizeCategoryCount)
+		.filter((item): item is CategoryCount => item !== null);
+}
+
+export async function getPublicEntrepreneurs(
+	params: { page?: number; limit?: number; q?: string; categoria?: string } = {}
+): Promise<Paginated<Entrepreneur>> {
+	const payload = await apiRequest(`/entrepreneurs/public${query(params)}`, { auth: false });
+	return toPage(payload, normalizeEntrepreneur);
+}
+
+export async function getPublicEntrepreneurBySlug(slug: string): Promise<Entrepreneur> {
+	const payload = await apiRequest(`/entrepreneurs/public/${encodeURIComponent(slug)}`, {
+		auth: false
+	});
+	const record = isRecord(payload) && isRecord(payload.entrepreneur) ? payload.entrepreneur : payload;
+	const entrepreneur = normalizeEntrepreneur(record);
+	if (!entrepreneur) throw new ApiServiceError('No se pudo leer este emprendimiento.', 404);
+	return entrepreneur;
 }
