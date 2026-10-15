@@ -421,7 +421,7 @@
 						{jornada.location}
 					</span>
 				{/if}
-				<a class="jornada-button" href="/jornadas">Ver jornada</a>
+				<a class="jornada-button" href={`/jornadas/${jornada.id}`}>Ver jornada</a>
 			</div>
 		</section>
 	{/if}

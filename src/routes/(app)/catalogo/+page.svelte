@@ -3,10 +3,12 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
+		createProductCheckout,
 		getCategoryCounts,
 		getProductCategoryTree,
 		getPublicEntrepreneurs,
 		getPublicProducts,
+		ApiServiceError,
 		type CategoryCount,
 		type Entrepreneur,
 		type Product
@@ -32,6 +34,9 @@
 	let referenceReady = $state(false);
 	// Si el logo del socio destacado no responde, se muestran las iniciales.
 	let featuredLogoFailed = $state(false);
+	// Producto cuyo checkout se está creando (para deshabilitar su botón).
+	let buyingProductId = $state('');
+	let buyError = $state('');
 
 	// slug -> id de categoria, para poder filtrar desde la URL.
 	let categoryIdBySlug = new Map<string, string>();
@@ -148,6 +153,26 @@
 
 	function scrollToShelf() {
 		document.getElementById('catalogo-grilla')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
+
+	/**
+	 * Crea la intención de pago en la pasarela y redirige al checkout hosted.
+	 * El monto lo fija el servidor con el precio del producto.
+	 */
+	async function buyProduct(product: Product) {
+		if (buyingProductId) return;
+		buyError = '';
+		buyingProductId = product.id;
+		try {
+			const session = await createProductCheckout(product);
+			window.location.href = session.checkoutUrl;
+		} catch (error) {
+			buyError =
+				error instanceof ApiServiceError
+					? error.message
+					: 'No se pudo iniciar el pago. Inténtalo de nuevo.';
+			buyingProductId = '';
+		}
 	}
 </script>
 
@@ -277,6 +302,10 @@
 	<p class="banner" role="alert">{errorMessage}</p>
 {/if}
 
+{#if buyError}
+	<p class="banner" role="alert">{buyError}</p>
+{/if}
+
 {#if isLoading}
 	<p class="state">Cargando catálogo…</p>
 {:else if products.length === 0}
@@ -286,57 +315,69 @@
 			: 'Todavía no hay productos publicados en esta categoría.'}
 	</p>
 {:else}
-	<section class="grid" aria-label="Productos">
-		{#each products as product (product.id)}
+	<section class="grid" aria-label="Productos">		{#each products as product (product.id)}
 			<article class="pcard">
-				<div class="pcard-media">
-					{#if product.imageUrl}
-						<img src={product.imageUrl} alt={product.name} loading="lazy" />
-					{:else}
-						<span class="pcard-placeholder" aria-hidden="true">
-							<svg viewBox="0 0 24 24"
+				<a class="pcard-link" href={`/catalogo/${product.id}`} aria-label={`Ver ${product.name}`}>
+					<div class="pcard-media">
+						{#if product.imageUrl}
+							<img src={product.imageUrl} alt={product.name} loading="lazy" />
+						{:else}
+							<span class="pcard-placeholder" aria-hidden="true">
+								<svg viewBox="0 0 24 24"
+									><path d="M12 21c0-6 0-9 8-12 0 8-3 11-8 12Z" /><path
+										d="M12 21C12 14 10 9 4 6c-1 7 2 12 8 15Z"
+										/></svg
+									>
+								</span>
+						{/if}
+
+						{#if categoryNameOf(product)}
+							<span class="pcard-tag">{categoryNameOf(product)}</span>
+						{/if}
+
+						<span class="pcard-heart" aria-hidden="true">
+							<svg viewBox="0 0 20 20"
+								><path d="M3 7.5 5 4h10l2 3.5M4.2 7.5h11.6V16H4.2Z" /><path
+									d="M8 16v-4h4v4"
+									/></svg
+								>
+						</span>
+
+						<span class="pcard-impact">
+							<svg viewBox="0 0 24 24" aria-hidden="true"
 								><path d="M12 21c0-6 0-9 8-12 0 8-3 11-8 12Z" /><path
 									d="M12 21C12 14 10 9 4 6c-1 7 2 12 8 15Z"
-								/></svg
-							>
+									/></svg
+								>
+							Compra con impacto
 						</span>
-					{/if}
-
-					{#if categoryNameOf(product)}
-						<span class="pcard-tag">{categoryNameOf(product)}</span>
-					{/if}
-
-					<span class="pcard-heart" aria-hidden="true">
-						<svg viewBox="0 0 20 20"
-							><path d="M3 7.5 5 4h10l2 3.5M4.2 7.5h11.6V16H4.2Z" /><path
-								d="M8 16v-4h4v4"
-							/></svg
-						>
-					</span>
-
-					<span class="pcard-impact">
-						<svg viewBox="0 0 24 24" aria-hidden="true"
-							><path d="M12 21c0-6 0-9 8-12 0 8-3 11-8 12Z" /><path
-								d="M12 21C12 14 10 9 4 6c-1 7 2 12 8 15Z"
-							/></svg
-						>
-						Compra con impacto
-					</span>
-				</div>
-
-				<div class="pcard-body">
-					<strong>{product.name}</strong>
-					{#if product.description}
-						<span class="pcard-desc">{toPlainText(product.description, 70)}</span>
-					{/if}
-					<div class="pcard-foot">
-						<span class="pcard-price">
-							{formatCurrency(product.priceCents, product.currencyCode)}
-						</span>
-						<span class="pcard-arrow" aria-hidden="true">
-							<svg viewBox="0 0 20 20"><path d="M6 14 14 6M8.5 6H14v5.5" /></svg>
-						</span>
+					</div>					<div class="pcard-body">
+						<strong>{product.name}</strong>
+						{#if product.description}
+							<span class="pcard-desc">{toPlainText(product.description, 70)}</span>
+						{/if}
 					</div>
+				</a>
+
+				<div class="pcard-foot">
+					<span class="pcard-price">
+						{formatCurrency(product.priceCents, product.currencyCode)}
+					</span>
+					<button
+						class="pcard-buy"
+						type="button"
+						disabled={buyingProductId === product.id ||
+							(product.stock !== null && product.stock <= 0)}
+						onclick={() => buyProduct(product)}
+					>
+						{#if buyingProductId === product.id}
+							Abriendo…
+						{:else if product.stock !== null && product.stock <= 0}
+							Agotado
+						{:else}
+							Comprar
+						{/if}
+					</button>
 				</div>
 			</article>
 		{/each}
@@ -720,6 +761,20 @@
 		box-shadow: var(--iz-shadow-md);
 	}
 
+	/* La tarjeta entera lleva a la ficha, pero el botón Comprar se mantiene encima. */
+	.pcard-link {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.pcard-link:focus-visible {
+		outline: 2px solid var(--iz-green-600);
+		outline-offset: -2px;
+	}
+
 	.pcard-media {
 		position: relative;
 		display: block;
@@ -826,7 +881,7 @@
 		flex: 1;
 		flex-direction: column;
 		gap: 6px;
-		padding: 14px;
+		padding: 14px 14px 8px;
 	}
 
 	.pcard-body strong {
@@ -850,34 +905,42 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: 10px;
 		margin-top: auto;
-		padding-top: 8px;
+		padding: 8px 14px 14px;
+	}
+
+	.pcard-buy {
+		padding: 8px 15px;
+		border: 0;
+		border-radius: 999px;
+		background: var(--iz-green-700);
+		color: #f4f8f2;
+		font: inherit;
+		font-size: 12px;
+		font-weight: 650;
+		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			background 140ms ease,
+			transform 140ms ease;
+	}
+
+	.pcard-buy:hover:not(:disabled) {
+		background: var(--iz-green-800);
+		transform: translateY(-1px);
+	}
+
+	.pcard-buy:disabled {
+		background: var(--iz-line-strong);
+		color: var(--iz-muted);
+		cursor: not-allowed;
 	}
 
 	.pcard-price {
 		color: var(--iz-ink);
 		font-size: 15px;
 		font-weight: 700;
-	}
-
-	.pcard-arrow {
-		display: grid;
-		width: 28px;
-		height: 28px;
-		place-items: center;
-		border-radius: 50%;
-		background: var(--iz-green-100);
-		color: var(--iz-green-700);
-	}
-
-	.pcard-arrow svg {
-		width: 15px;
-		height: 15px;
-		fill: none;
-		stroke: currentColor;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-		stroke-width: 1.7;
 	}
 
 	.more {

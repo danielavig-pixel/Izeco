@@ -69,7 +69,11 @@ export interface Product {
 	entrepreneurId: string;
 	entrepreneurName: string;
 	stock: number | null;
+	/** Unidades disponibles; null = sin límite (servicio). */
+	available: number | null;
 	imageUrl: string;
+	/** Todas las imágenes del producto (galería). */
+	images: string[];
 	slug: string;
 }
 
@@ -82,10 +86,72 @@ export interface VolunteerActivity {
 	endsAt: string | null;
 	imageUrl: string;
 	status: string;
+	/** null = cupos ilimitados. */
+	slots: number | null;
+	taken: number;
+	remaining: number | null;
+}
+
+/** Material recolectado en una jornada (endpoint publico). */
+export interface ActivityCollection {
+	id: string;
+	material: string;
+	unit: string;
+	/** Ya viene formateado por la API: "45.500 kg". */
+	quantityLabel: string;
+	collectedAt: string | null;
+	notes: string;
+	rawMaterialProductName: string;
+}
+
+// Etiquetas de los materiales recolectados (la API los entrega como slug).
+const MATERIAL_LABELS: Record<string, string> = {
+	pet: 'Botellas PET',
+	plastico_filme: 'Plástico film',
+	plastico_rigido: 'Plástico rígido',
+	carton: 'Cartón',
+	papel: 'Papel',
+	aluminio: 'Aluminio',
+	vidrio: 'Vidrio',
+	metal: 'Metal',
+	organico: 'Orgánico',
+	otro: 'Otro material'
+};
+
+export function materialLabel(material: string): string {
+	return MATERIAL_LABELS[material?.toLowerCase()] ?? 'Material';
+}
+
+export interface Campaign {
+	id: string;
+	title: string;
+	slug: string;
+	summary: string;
+	description: string;
+	imageUrl: string;
+	goalCents: number | null;
+	donationUrl: string;
+	status: string;
+	startsAt: string | null;
+	endsAt: string | null;
+	isActive: boolean;
+	createdAt: string | null;
+}
+
+/** Resultado de inscribirse o cancelar una inscripcion a una jornada. */
+export interface VolunteerSignupResult {
+	id: string;
+	activityId: string;
+	activityTitle: string;
+	status: string;
+	note: string;
+	createdAt: string | null;
 }
 
 export interface VolunteerSignup {
 	id: string;
+	activityId: string;
+	activityTitle: string;
 	status: string;
 	createdAt: string | null;
 	activity: VolunteerActivity | null;
@@ -135,6 +201,21 @@ function pickString(source: Record<string, unknown> | null, keys: string[]): str
 	return '';
 }
 
+function pickNullableNumber(
+	source: Record<string, unknown> | null,
+	keys: string[]
+): number | null {
+	if (!source) return null;
+	for (const key of keys) {
+		const value = source[key];
+		if (typeof value === 'number' && Number.isFinite(value)) return value;
+		if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) {
+			return Number(value);
+		}
+	}
+	return null;
+}
+
 function pickNumber(source: Record<string, unknown> | null, keys: string[]): number {
 	if (!source) return 0;
 	for (const key of keys) {
@@ -161,6 +242,41 @@ function pickDate(source: Record<string, unknown> | null, keys: string[]): strin
 	if (!value) return null;
 	const parsed = new Date(value);
 	return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+/** Todas las imágenes del producto, en orden; fallback a la primera imagen. */
+function imageList(source: Record<string, unknown> | null): string[] {
+	if (!source) return [];
+	for (const key of ['images', 'photos', 'gallery']) {
+		const value = source[key];
+		if (Array.isArray(value)) {
+			const urls = value
+				.map((item) =>
+					typeof item === 'string'
+						? item
+						: isRecord(item)
+							? pickString(item, ['url', 'imageUrl'])
+							: ''
+				)
+				.filter((url) => url.trim());
+			if (urls.length) return urls;
+		}
+	}		const single = firstImage(source);
+	return single ? [single] : [];
+}
+
+/** Busca el emprendimiento que produjo un producto (por id), si existe. */
+function entrepreneurOfProduct(
+	product: Product,
+	entrepreneurs: Entrepreneur[]
+): Entrepreneur | null {
+	if (!product.entrepreneurId) return null;
+	return entrepreneurs.find((e) => e.id === product.entrepreneurId) ?? null;
+}
+
+function categoryNameOf(product: Product, counts: CategoryCount[]): string {
+	if (product.categoryName) return product.categoryName;
+	return counts.find((count) => count.categoryId === product.categoryId)?.name ?? '';
 }
 
 function firstImage(source: Record<string, unknown> | null): string {
@@ -269,6 +385,8 @@ function normalizeProduct(raw: unknown): Product | null {
 		categoryId: pickString(raw, ['categoryId', 'category_id']),
 		entrepreneurId: pickString(raw, ['entrepreneurId', 'entrepreneur_id']),
 		stock: isRecord(raw) && 'stock' in raw && typeof raw.stock === 'number' ? raw.stock : null,
+		available: pickNullableNumber(raw, ['available', 'stock']),
+		images: imageList(raw),
 		categoryName:
 			pickString(category, ['name', 'title']) || pickString(raw, ['categoryName', 'category']),
 		entrepreneurName:
@@ -284,6 +402,10 @@ function normalizeVolunteer(raw: unknown): VolunteerActivity | null {
 	const title = pickString(raw, ['title', 'name']);
 	if (!title) return null;
 
+	const slots = pickNullableNumber(raw, ['slots', 'capacity', 'quota']);
+	const taken = pickNumber(raw, ['taken', 'signed', 'signups']);
+	const remaining = pickNullableNumber(raw, ['remaining', 'left', 'available']);
+
 	return {
 		id: pickString(raw, ['id', 'volunteerId', 'activityId', 'uuid']),
 		title,
@@ -292,7 +414,66 @@ function normalizeVolunteer(raw: unknown): VolunteerActivity | null {
 		startsAt: pickDate(raw, ['startsAt', 'startAt', 'startDate', 'date']),
 		endsAt: pickDate(raw, ['endsAt', 'endAt', 'endDate']),
 		imageUrl: firstImage(raw),
-		status: pickString(raw, ['status', 'state']).toLowerCase()
+		status: pickString(raw, ['status', 'state']).toLowerCase(),
+		slots,
+		taken,
+		// Sin cupos declarados la jornada es abierta: no hay "quedan N".
+		remaining: remaining ?? (slots === null ? null : Math.max(0, slots - taken))
+	};
+}
+
+function normalizeCollection(raw: unknown): ActivityCollection | null {
+	if (!isRecord(raw)) return null;
+	const material = pickString(raw, ['material', 'materialType']).toLowerCase();
+	const quantityLabel = pickString(raw, ['quantityLabel', 'quantity_label']);
+	if (!material && !quantityLabel) return null;
+
+	return {
+		id: pickString(raw, ['id', 'collectionId']),
+		material,
+		unit: pickString(raw, ['unit']).toLowerCase(),
+		quantityLabel,
+		collectedAt: pickDate(raw, ['collectedAt', 'collected_at', 'date']),
+		notes: pickString(raw, ['notes', 'note']),
+		rawMaterialProductName: pickString(raw, ['rawMaterialProductName', 'rawMaterialProduct'])
+	};
+}
+
+function normalizeCampaign(raw: unknown): Campaign | null {
+	if (!isRecord(raw)) return null;
+	const title = pickString(raw, ['title', 'name']);
+	const slug = pickString(raw, ['slug']);
+	if (!title && !slug) return null;
+
+	return {
+		id: pickString(raw, ['id', 'campaignId']),
+		title: title || slug,
+		slug,
+		summary: pickString(raw, ['summary', 'subtitle']),
+		description: pickString(raw, ['description', 'body']),
+		imageUrl: firstImage(raw),
+		goalCents: pickNullableNumber(raw, ['goalCents', 'goal_cents']),
+		donationUrl: pickString(raw, ['donationUrl', 'donation_url']),
+		status: pickString(raw, ['status', 'state']).toLowerCase(),
+		startsAt: pickDate(raw, ['startsAt', 'startAt', 'startDate']),
+		endsAt: pickDate(raw, ['endsAt', 'endAt', 'endDate']),
+		isActive: pickBoolean(raw, ['isActive', 'active']),
+		createdAt: pickDate(raw, ['createdAt', 'created_at'])
+	};
+}
+
+function normalizeSignupResult(raw: unknown): VolunteerSignupResult | null {
+	if (!isRecord(raw)) return null;
+	const activityId = pickString(raw, ['activityId', 'activity_id']);
+	if (!activityId) return null;
+
+	return {
+		id: pickString(raw, ['id', 'signupId']),
+		activityId,
+		activityTitle: pickString(raw, ['activityTitle', 'title']),
+		status: pickString(raw, ['status', 'state']).toLowerCase(),
+		note: pickString(raw, ['note']),
+		createdAt: pickDate(raw, ['createdAt', 'created_at'])
 	};
 }
 
@@ -352,6 +533,8 @@ function normalizeSignup(raw: unknown): VolunteerSignup | null {
 
 	return {
 		id: pickString(raw, ['id', 'signupId', 'uuid']),
+		activityId: pickString(raw, ['activityId', 'activity_id']),
+		activityTitle: pickString(raw, ['activityTitle', 'activity_title']),
 		status: pickString(raw, ['status', 'state']).toLowerCase(),
 		createdAt: pickDate(raw, ['createdAt', 'created_at', 'signedUpAt', 'date']),
 		activity
@@ -482,6 +665,48 @@ export async function getMyPayments(
 	return toPage(payload, normalizePayment);
 }
 
+/**
+ * Intención de pago para un producto (checkout hosted). Devuelve la URL de la
+ * pasarela a la que hay que redirigir al comprador. Requiere sesión.
+ */
+export interface CheckoutSession {
+	paymentId: string;
+	checkoutUrl: string;
+	status: string;
+}
+
+function normalizeCheckout(raw: unknown): CheckoutSession | null {
+	if (!isRecord(raw)) return null;
+	const checkoutUrl = pickString(raw, ['checkoutUrl', 'checkout_url', 'url', 'initPoint']);
+	if (!checkoutUrl) return null;
+	const payment = isRecord(raw.payment) ? raw.payment : raw;
+	return {
+		paymentId: pickString(payment, ['id', 'paymentId', 'uuid']),
+		checkoutUrl,
+		status: pickString(payment, ['status', 'state']).toLowerCase() || 'pendiente'
+	};
+}
+
+/**
+ * Crea la intención de pago de un producto en la pasarela y devuelve la URL
+ * de checkout. El monto sale del precio del producto (nunca del cliente).
+ */
+export async function createProductCheckout(product: Product): Promise<CheckoutSession> {
+	const payload = await apiRequest('/payments/checkout', {
+		method: 'POST',
+		body: {
+			amountCents: product.priceCents,
+			currencyCode: product.currencyCode || 'COP',
+			description: product.name,
+			entrepreneurId: product.entrepreneurId || undefined,
+			metadata: { productId: product.id }
+		}
+	});
+	const session = normalizeCheckout(payload);
+	if (!session) throw new ApiServiceError('No se pudo iniciar el pago.');
+	return session;
+}
+
 export async function getMyVolunteerSignups(
 	params: { page?: number; limit?: number; status?: string } = {}
 ): Promise<Paginated<VolunteerSignup>> {
@@ -527,11 +752,78 @@ export async function getPublicProducts(
 	return toPage(payload, normalizeProduct);
 }
 
+export async function getPublicProductById(id: string): Promise<Product> {
+	const payload = await apiRequest(`/products/public/${encodeURIComponent(id)}`, { auth: false });
+	const product = normalizeProduct(payload);
+	if (!product) throw new ApiServiceError('No se pudo leer este producto.', 404);
+	return product;
+}
+
 export async function getPublicVolunteerActivities(
 	params: { page?: number; limit?: number; status?: string } = {}
 ): Promise<Paginated<VolunteerActivity>> {
 	const payload = await apiRequest(`/volunteer/public${query(params)}`, { auth: false });
 	return toPage(payload, normalizeVolunteer);
+}
+
+export async function getPublicVolunteerActivity(id: string): Promise<VolunteerActivity> {
+	const payload = await apiRequest(`/volunteer/public/${encodeURIComponent(id)}`, {
+		auth: false
+	});
+	const activity = normalizeVolunteer(payload);
+	if (!activity) throw new ApiServiceError('No se pudo leer esta jornada.', 404);
+	return activity;
+}
+
+/** Material recolectado en una jornada: cierra la traza material -> materia prima. */
+export async function getActivityCollections(id: string): Promise<ActivityCollection[]> {
+	const payload = await apiRequest(`/volunteer/public/${encodeURIComponent(id)}/collections`, {
+		auth: false
+	});
+	const rawItems = Array.isArray(payload)
+		? payload
+		: isRecord(payload) && Array.isArray(payload.items)
+			? payload.items
+			: [];
+	return rawItems
+		.map(normalizeCollection)
+		.filter((item): item is ActivityCollection => item !== null);
+}
+
+/** Inscribirme: la inscripcion queda pendiente hasta que la confirmen. */
+export async function signupToVolunteer(id: string): Promise<VolunteerSignupResult> {
+	const payload = await apiRequest(`/volunteer/${encodeURIComponent(id)}/signup`, {
+		method: 'POST'
+	});
+	const result = normalizeSignupResult(payload);
+	if (!result) throw new ApiServiceError('No se pudo confirmar tu inscripción.');
+	return result;
+}
+
+/** Cancelar mi inscripcion: libera el cupo. */
+export async function cancelVolunteerSignup(id: string): Promise<VolunteerSignupResult> {
+	const payload = await apiRequest(`/volunteer/${encodeURIComponent(id)}/signup`, {
+		method: 'DELETE'
+	});
+	const result = normalizeSignupResult(payload);
+	if (!result) throw new ApiServiceError('No se pudo cancelar tu inscripción.');
+	return result;
+}
+
+export async function getPublicCampaigns(
+	params: { page?: number; limit?: number } = {}
+): Promise<Paginated<Campaign>> {
+	const payload = await apiRequest(`/campaigns/public${query(params)}`, { auth: false });
+	return toPage(payload, normalizeCampaign);
+}
+
+export async function getPublicCampaignBySlug(slug: string): Promise<Campaign> {
+	const payload = await apiRequest(`/campaigns/public/${encodeURIComponent(slug)}`, {
+		auth: false
+	});
+	const campaign = normalizeCampaign(payload);
+	if (!campaign) throw new ApiServiceError('No se pudo leer esta campaña.', 404);
+	return campaign;
 }
 
 export async function getProductCategoryTree(): Promise<CategoryNode[]> {

@@ -81,3 +81,71 @@ https://svelte.dev/e/css_unused_selector
 304 GET /elegir-rol
 304 GET /elegir-rol
 200 GET /registro
+11:41:35 [vite] (client) hmr update /src/routes/(app)/+layout.svelte
+11:41:35 [vite] (ssr) page reload src/routes/(app)/+layout.svelte
+11:41:35 [vite] (ssr) program reload
+11:42:54 [vite] (client) page reload static/_community-check.html
+404 GET /favicon.ico
+11:54:38 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/dashboard/+page.svelte, /src/routes/elegir-rol/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/catalogo/+page.svelte
+11:54:38 [vite] (ssr) page reload src/lib/services/api/api.service.ts
+11:54:38 [vite] (ssr) program reload
+11:55:14 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/dashboard/+page.svelte, /src/routes/elegir-rol/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/catalogo/+page.svelte
+11:55:14 [vite] (ssr) page reload src/lib/services/api/api.service.ts
+11:55:14 [vite] (ssr) program reload
+11:56:42 [vite] (client) hmr update /src/routes/(app)/campanas/+page.svelte
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/5.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/6.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/7.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/8.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/9.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/11.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/13.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/14.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/16.js
+11:57:24 [vite] (client) page reload .svelte-kit/generated/dev/client/app.js
+200 GET /registro
+200 GET /dashboard
+11:58:09 [vite] (client) hmr update /src/routes/(app)/jornadas/+page.svelte
+11:59:27 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/dashboard/+page.svelte, /src/routes/elegir-rol/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/catalogo/+page.svelte, /src/routes/(app)/campanas/+page.svelte, /src/routes/(app)/jornadas/+page.svelte
+11:59:27 [vite] (ssr) page reload src/lib/services/api/api.service.ts
+11:59:27 [vite] (ssr) program reload
+12:00:21 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/11.js
+12:00:21 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/13.js
+12:00:21 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/14.js
+12:00:21 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/15.js
+12:00:21 [vite] (client) page reload .svelte-kit/generated/dev/client/nodes/16.js
+12:00:21 [vite] (client) page reload .svelte-kit/generated/dev/client/app.js
+200 GET /registro
+304 GET /dashboard
+12:01:01 [vite] (client) hmr update /src/routes/(app)/dashboard/+page.svelte
+12:01:01 [vite] (ssr) page reload src/routes/(app)/dashboard/+page.svelte
+12:01:01 [vite] (ssr) program reload
+12:04:34 [vite] (client) hmr update /src/routes/(app)/campanas/+page.svelte
+12:04:34 [vite] (client) hmr update /src/routes/(app)/jornadas/+page.svelte
+200 GET /campanas
+200 GET /campanas/rio-vivo-recuperemos-la-ribera
+200 GET /jornadas
+200 GET /jornadas/be74a97f-0508-457c-b2ce-f87d6a9b161e
+200 GET /jornadas/be74a97f-0508-457c-b2ce-f87d6a9b161e
+200 GET /campanas
+200 GET /campanas/mil-arboles-para-la-cordillera
+304 GET /jornadas/be74a97f-0508-457c-b2ce-f87d6a9b161e
+12:21:38 [vite] (client) page reload static/_community-check.html
+12:34:23 [vite] (client) hmr update /src/routes/(app)/+layout.svelte, /src/routes/(app)/emprendimientos/+page.svelte, /src/routes/(app)/dashboard/+page.svelte, /src/routes/elegir-rol/+page.svelte, /src/routes/(app)/emprendimientos/[slug]/+page.svelte, /src/routes/(app)/catalogo/+page.svelte, /src/routes/(app)/campanas/+page.svelte, /src/routes/(app)/jornadas/+page.svelte, /src/routes/(app)/campanas/[slug]/+page.svelte, /src/routes/(app)/jornadas/[id]/+page.svelte
+12:34:23 [vite] (ssr) page reload src/lib/services/api/api.service.ts
+12:34:23 [vite] (ssr) program reload
+12:34:46 [vite] (client) hmr update /src/routes/(app)/catalogo/+page.svelte
+12:34:46 [vite] (ssr) page reload src/routes/(app)/catalogo/+page.svelte
+12:35:10 [vite-plugin-svelte] src/routes/(app)/catalogo/+page.svelte:904:1 Unused CSS selector ".pcard-arrow"
+https://svelte.dev/e/css_unused_selector
+12:35:10 [vite-plugin-svelte] src/routes/(app)/catalogo/+page.svelte:914:1 Unused CSS selector ".pcard-arrow svg"
+https://svelte.dev/e/css_unused_selector
+12:35:10 [vite] (client) hmr update /src/routes/(app)/catalogo/+page.svelte, /src/routes/(app)/catalogo/+page.svelte?svelte&type=style&lang.css
+12:35:10 [vite] (ssr) page reload src/routes/(app)/catalogo/+page.svelte
+12:35:10 [vite-plugin-svelte] src/routes/(app)/catalogo/+page.svelte:904:1 Unused CSS selector ".pcard-arrow"
+https://svelte.dev/e/css_unused_selector
+12:35:10 [vite-plugin-svelte] src/routes/(app)/catalogo/+page.svelte:914:1 Unused CSS selector ".pcard-arrow svg"
+https://svelte.dev/e/css_unused_selector
+12:35:52 [vite] (client) hmr update /src/routes/(app)/catalogo/+page.svelte?svelte&type=style&lang.css
+12:35:52 [vite] (ssr) page reload src/routes/(app)/catalogo/+page.svelte
+200 GET /catalogo

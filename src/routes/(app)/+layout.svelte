@@ -25,7 +25,7 @@
 		{ label: 'Inicio', href: '/dashboard', dot: false },
 		{ label: 'Catálogo', href: '/catalogo', dot: false },
 		{ label: 'Emprendimientos', href: '/emprendimientos', dot: false },
-		{ label: 'Campañas', href: '/campanas', dot: true },
+		{ label: 'Campañas', href: '/campanas', dot: false },
 		{ label: 'Jornadas', href: '/jornadas', dot: false }
 	];
 
