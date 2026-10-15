@@ -146,9 +146,9 @@
 					</svg>
 				{/if}
 			</button>
-		</form>
-
-		<p class="card-footer">Tu espacio seguro para seguir creciendo.</p>
+		</form>			<p class="card-footer">
+				¿Aún no tienes cuenta? <a href="/registro">Créala aquí</a>
+			</p>
 	</section>
 </main>
 
@@ -388,6 +388,13 @@
 		color: #708078;
 		font-size: 9px;
 		text-align: center;
+	}
+
+	.card-footer a {
+		color: #326847;
+		font-weight: 650;
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 
 	@media (max-width: 380px) {
