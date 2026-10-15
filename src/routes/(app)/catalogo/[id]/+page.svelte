@@ -1,23 +1,20 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
 	import {
 		createProductCheckout,
 		getCategoryCounts,
-		getPublicEntrepreneurs,
+		getProductCategoryTree,
 		getPublicProductById,
 		ApiServiceError,
-		type CategoryCount,
-		type Entrepreneur,
 		type Product
 	} from '#lib/services/api/api.service.js';
-	import { formatCurrency, initials, toPlainText } from '#lib/utils/format.js';
+	import { formatCurrency, toPlainText } from '#lib/utils/format.js';
 
 	const id = $derived(page.params.id ?? '');
 
 	let product = $state<Product | null>(null);
-	let origin = $state<Entrepreneur | null>(null);
 	let categoryName = $state('');
+	let categorySlug = $state('');
 	let isLoading = $state(true);
 	let errorMessage = $state('');
 	let coverFailed = $state(false);
@@ -26,10 +23,6 @@
 	let buyError = $state('');
 
 	// El detalle de producto trae solo el id del socio; se resuelve con el listado público.
-	onMount(async () => {
-		await load(id);
-	});
-
 	$effect(() => {
 		if (id) void load(id);
 	});
@@ -39,7 +32,6 @@
 		isLoading = true;
 		errorMessage = '';
 		product = null;
-		origin = null;
 		coverFailed = false;
 		galleryIndex = 0;
 
@@ -47,27 +39,13 @@
 			const found = await getPublicProductById(currentId);
 			product = found;
 
-			const [counts, entrepreneurs] = await Promise.all([
-				getCategoryCounts().catch(() => [] as CategoryCount[]),
-				found.entrepreneurId
-					? getPublicEntrepreneurs({ limit: 50 }).catch(() => ({
-							items: [] as Entrepreneur[],
-							total: 0,
-							page: 1,
-							limit: 50,
-							totalPages: 1
-						}))
-					: Promise.resolve({
-							items: [] as Entrepreneur[],
-							total: 0,
-							page: 1,
-							limit: 50,
-							totalPages: 1
-						})
+			const [counts, tree] = await Promise.all([
+				getCategoryCounts(),
+				getProductCategoryTree()
 			]);
 
 			categoryName = counts.find((count) => count.categoryId === found.categoryId)?.name ?? '';
-			origin = entrepreneurs.items.find((e) => e.id === found.entrepreneurId) ?? null;
+			categorySlug = tree.find((node) => node.id === found.categoryId)?.slug ?? '';
 		} catch (error) {
 			errorMessage =
 				error instanceof ApiServiceError && error.status === 404
@@ -194,28 +172,27 @@
 				{/if}
 			</section>
 
-			{#if origin}
+			{#if categoryName}
 				<section class="panel origin">
 					<h2>De dónde salió</h2>
-					<p class="panel-sub">El socio local que elabora este producto.</p>
+					<p class="panel-sub">Categoría de la comunidad que elabora este producto.</p>
 					<div class="origin-card">
-						{#if origin.logoUrl}
-							<img class="origin-logo" src={origin.logoUrl} alt="" loading="lazy" />
-						{:else}
-							<span class="origin-logo" aria-hidden="true">{initials(origin.name)}</span>
-						{/if}
+						<span class="origin-logo" aria-hidden="true">
+							<svg viewBox="0 0 24 24">
+								<path d="M12 21c0-6 0-9 8-12 0 8-3 11-8 12Z" />
+								<path d="M12 21C12 14 10 9 4 6c-1 7 2 12 8 15Z" />
+							</svg>
+						</span>
 						<div class="origin-id">
-							<strong>{origin.name}</strong>
-							{#if origin.category}
-								<span class="origin-category">{origin.category}</span>
-							{/if}
+							<strong>{categoryName}</strong>
+							<span class="origin-category">Categoría del catálogo</span>
 						</div>
 					</div>
-					{#if origin.description}
-						<p class="origin-desc">{toPlainText(origin.description, 180)}</p>
-					{/if}
-					<a class="origin-link" href={`/emprendimientos/${origin.slug}`}>
-						Ver emprendimiento
+					<a
+						class="origin-link"
+						href={categorySlug ? `/catalogo?categoria=${categorySlug}` : '/catalogo'}
+					>
+						Ver más de esta categoría
 						<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 15 15 5M8 5h7v7" /></svg>
 					</a>
 				</section>
@@ -468,11 +445,18 @@
 		flex: 0 0 auto;
 		place-items: center;
 		border-radius: 12px;
-		background: #ddd1b6;
-		color: #6a5b3e;
-		font-size: 15px;
-		font-weight: 700;
-		object-fit: cover;
+		background: var(--iz-green-100);
+		color: var(--iz-green-700);
+	}
+
+	.origin-logo svg {
+		width: 24px;
+		height: 24px;
+		fill: none;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.6;
 	}
 
 	.origin-id {
@@ -490,13 +474,6 @@
 	.origin-category {
 		color: var(--iz-muted);
 		font-size: 12px;
-	}
-
-	.origin-desc {
-		margin: 0 0 12px;
-		color: var(--iz-muted);
-		font-size: 12.5px;
-		line-height: 1.55;
 	}
 
 	.origin-link {
