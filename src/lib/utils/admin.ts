@@ -132,7 +132,8 @@ const GROUP_LABELS: Record<string, string> = {
 	voluntariados: 'Voluntariados',
 	inscripciones: 'Inscripciones',
 	notificaciones: 'Notificaciones',
-	dinero: 'Dinero'
+	dinero: 'Dinero',
+	donaciones: 'Donaciones'
 };
 
 /**

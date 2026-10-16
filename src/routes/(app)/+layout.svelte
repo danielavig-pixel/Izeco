@@ -39,6 +39,7 @@
 			: []),
 		{ label: 'Campañas', href: '/campanas', dot: false },
 		{ label: 'Jornadas', href: '/jornadas', dot: false },
+		{ label: 'Donaciones', href: '/donaciones', dot: false },
 		...(role === 'admin' ? [{ label: 'Administración', href: '/admin', dot: false }] : [])
 	]);
 

@@ -114,10 +114,15 @@
 		<p class="description">{toPlainText(campaign.description, 4000)}</p>
 
 		<div class="actions">
-			{#if campaign.donationUrl}
-				<a class="primary" href={campaign.donationUrl} target="_blank" rel="noopener noreferrer">
-					Ver cómo aportar
+			{#if campaign.isActive}
+				<a class="primary" href="/donaciones?campana={campaign.id}">
+					Donar a esta campaña
 					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 15 15 5M8 5h7v7" /></svg>
+				</a>
+			{/if}
+			{#if campaign.donationUrl}
+				<a class="secondary" href={campaign.donationUrl} target="_blank" rel="noopener noreferrer">
+					Ver cómo aportar
 				</a>
 			{/if}
 			<a class="secondary" href="/jornadas">Súmate a una jornada</a>

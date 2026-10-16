@@ -18,6 +18,7 @@
 		{ href: '/admin/recolecciones', label: 'Recolecciones', icon: 'recycle' },
 		{ href: '/admin/categorias', label: 'Categorías', icon: 'tag' },
 		{ href: '/admin/pagos', label: 'Pagos', icon: 'card' },
+		{ href: '/admin/donaciones', label: 'Donaciones', icon: 'gift' },
 		{ href: '/admin/difusion', label: 'Difusión', icon: 'mail' }
 	];
 
@@ -78,6 +79,9 @@
 						{:else if link.icon === 'card'}
 							<rect x="3" y="5" width="18" height="14" rx="2.5" />
 							<path d="M3 10h18" />
+						{:else if link.icon === 'gift'}
+							<path d="M4 9h16v11H4zM4 13h16M12 9v11" />
+							<path d="M8.4 9C7 7.6 6.4 6.6 6.4 5.6A1.5 1.5 0 0 1 8.9 4.4C10.3 5 11.6 7 12 9c.4-2 1.7-4 3.1-4.6a1.5 1.5 0 0 1 2.5 1.2c0 1-.6 2-2 3.4" />
 						{:else}
 							<rect x="3" y="5" width="18" height="14" rx="2" />
 							<path d="m4 7 8 6 8-6" />

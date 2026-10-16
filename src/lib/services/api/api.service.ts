@@ -9,7 +9,7 @@ import { getAccessToken } from '../auth/auth.service.js';
  * formas de paginación ({ items } o array) y distintos nombres de campo.
  */
 
-const API_BASE_URL = 'https://reseedb.vercel.app';
+const API_BASE_URL = 'http://localhost:3000';
 
 export class ApiServiceError extends Error {
 	constructor(
@@ -51,6 +51,67 @@ export interface Payment {
 	refundedAmountCents?: number;
 	confirmedAt?: string | null;
 	createdAt: string | null;
+}
+
+/** Aporte económico a una campaña o al fondo general de la plataforma. */
+export interface Donation {
+	id: string;
+	amountCents: number;
+	/** Monto ya formateado por la API (ej. "25000.00"). */
+	amount: string;
+	currencyCode: string;
+	status: string;
+	message: string;
+	anonymous: boolean;
+	campaignId: string | null;
+	campaignTitle: string | null;
+	campaignSlug: string | null;
+	/** Pago que cobra el aporte; con el sandbox se resuelve en /checkout/[id]. */
+	paymentId: string | null;
+	/** Vacío cuando el aporte es anónimo. */
+	donorName: string | null;
+	createdAt: string | null;
+	confirmedAt: string | null;
+}
+
+/** Avance de una campaña con meta de recaudo. */
+export interface DonationCampaignProgress {
+	id: string;
+	title: string;
+	slug: string;
+	summary: string;
+	imageUrl: string;
+	goalCents: number | null;
+	raisedCents: number;
+	donors: number;
+	endsAt: string | null;
+}
+
+export interface DonationTotals {
+	raisedCents: number;
+	donors: number;
+	count: number;
+}
+
+export interface DonationSummary {
+	totals: DonationTotals;
+	/** Fondo general: aportes sin campaña. */
+	general: DonationTotals;
+	campaigns: DonationCampaignProgress[];
+	recent: Donation[];
+}
+
+export interface AdminDonationStats {
+	total: number;
+	aprobadas: number;
+	pendientes: number;
+	recaudado: string;
+	recaudadoCents: number;
+	fondoGeneral: string;
+	fondoGeneralCents: number;
+	porCampana: string;
+	porCampanaCents: number;
+	topCampanas: { campaignId: string; title: string; raisedCents: number; donors: number }[];
 }
 
 export interface NotificationItem {
@@ -368,6 +429,54 @@ function normalizePayment(raw: unknown): Payment | null {
 			pickNullableNumber(raw, ['refundedAmountCents', 'refunded_amount_cents', 'refundedCents']) ?? 0,
 		confirmedAt: pickDate(raw, ['confirmedAt', 'confirmed_at']),
 		createdAt: pickDate(raw, ['createdAt', 'created_at', 'date', 'paidAt'])
+	};
+}
+
+function normalizeTotals(raw: unknown): DonationTotals {
+	const record = isRecord(raw) ? raw : null;
+	return {
+		raisedCents: pickNumber(record, ['raisedCents', 'raised_cents']),
+		donors: pickNumber(record, ['donors']),
+		count: pickNumber(record, ['count'])
+	};
+}
+
+function normalizeCampaignProgress(raw: unknown): DonationCampaignProgress | null {
+	if (!isRecord(raw)) return null;
+	const id = pickString(raw, ['id', 'campaignId', 'campaign_id']);
+	if (!id) return null;
+	return {
+		id,
+		title: pickString(raw, ['title', 'name']),
+		slug: pickString(raw, ['slug']),
+		summary: pickString(raw, ['summary']),
+		imageUrl: pickString(raw, ['imageUrl', 'image_url']),
+		goalCents: pickNullableNumber(raw, ['goalCents', 'goal_cents']),
+		raisedCents: pickNumber(raw, ['raisedCents', 'raised_cents']),
+		donors: pickNumber(raw, ['donors']),
+		endsAt: pickDate(raw, ['endsAt', 'ends_at'])
+	};
+}
+
+function normalizeDonation(raw: unknown): Donation | null {
+	if (!isRecord(raw)) return null;
+	const id = pickString(raw, ['id', 'donationId', 'donation_id', 'uuid']);
+	if (!id) return null;
+	return {
+		id,
+		amountCents: pickNumber(raw, ['amountCents', 'amount_cents']),
+		amount: pickString(raw, ['amount']),
+		currencyCode: pickString(raw, ['currencyCode', 'currency_code', 'currency']) || 'COP',
+		status: pickString(raw, ['status', 'state']).toLowerCase(),
+		message: pickString(raw, ['message']),
+		anonymous: pickBoolean(raw, ['anonymous']),
+		campaignId: pickString(raw, ['campaignId', 'campaign_id']) || null,
+		campaignTitle: pickString(raw, ['campaignTitle', 'campaign_title']) || null,
+		campaignSlug: pickString(raw, ['campaignSlug', 'campaign_slug']) || null,
+		paymentId: pickString(raw, ['paymentId', 'payment_id']) || null,
+		donorName: pickString(raw, ['donorName', 'donor_name']) || null,
+		createdAt: pickDate(raw, ['createdAt', 'created_at']),
+		confirmedAt: pickDate(raw, ['confirmedAt', 'confirmed_at'])
 	};
 }
 
@@ -803,6 +912,63 @@ export async function createProductCheckout(product: Product): Promise<CheckoutS
 	const session = normalizeCheckout(payload);
 	if (!session || !session.paymentId) throw new ApiServiceError('No se pudo iniciar el pago.');
 	return session;
+}
+
+/* — Donaciones — */
+
+/** Historial de aportes del usuario autenticado. */
+export async function getMyDonations(
+	params: { page?: number; limit?: number } = {}
+): Promise<Paginated<Donation>> {
+	const payload = await apiRequest(`/donations/mine${query(params)}`);
+	return toPage(payload, normalizeDonation);
+}
+
+/** Estado del recaudo: totales, fondo general, avance por campaña y aportes recientes. */
+export async function getDonationSummary(): Promise<DonationSummary> {
+	const payload = await apiRequest('/donations/summary');
+	if (!isRecord(payload)) throw new ApiServiceError('No se pudo leer el estado de las donaciones.');
+	return {
+		totals: normalizeTotals(payload.totals),
+		general: normalizeTotals(payload.general),
+		campaigns: Array.isArray(payload.campaigns)
+			? payload.campaigns
+					.map(normalizeCampaignProgress)
+					.filter((item): item is DonationCampaignProgress => item !== null)
+			: [],
+		recent: Array.isArray(payload.recent)
+			? payload.recent.map(normalizeDonation).filter((item): item is Donation => item !== null)
+			: []
+	};
+}
+
+/**
+ * Registra un aporte y devuelve la intención de pago que lo cobra. Sin
+ * `campaignId` el aporte va al fondo general. Con la pasarela sandbox el pago
+ * se resuelve en `/checkout/[paymentId]`.
+ */
+export async function createDonation(input: {
+	amountCents: number;
+	campaignId?: string | null;
+	message?: string;
+	anonymous?: boolean;
+}): Promise<{ donation: Donation; paymentId: string; checkoutUrl: string }> {
+	const payload = await apiRequest('/donations', {
+		method: 'POST',
+		body: {
+			amountCents: input.amountCents,
+			campaignId: input.campaignId || undefined,
+			message: input.message?.trim() || undefined,
+			anonymous: input.anonymous || undefined
+		}
+	});
+	if (!isRecord(payload)) throw new ApiServiceError('No se pudo registrar la donación.');
+	const donation = normalizeDonation(payload.donation);
+	const paymentId = pickString(payload, ['paymentId', 'payment_id']);
+	if (!donation || !paymentId) {
+		throw new ApiServiceError('No se pudo iniciar el pago del aporte.');
+	}
+	return { donation, paymentId, checkoutUrl: pickString(payload, ['checkoutUrl', 'checkout_url']) };
 }
 
 export async function getMyVolunteerSignups(
@@ -1739,6 +1905,38 @@ export async function getAdminPayments(
 ): Promise<Paginated<AdminPayment>> {
 	const payload = await apiRequest(`/payments/admin/list${query(params)}`);
 	return toPage(payload, normalizeAdminPayment);
+}
+
+/* — Donaciones — */
+
+export async function getAdminDonations(
+	params: { page?: number; limit?: number; status?: string } = {}
+): Promise<Paginated<Donation>> {
+	const payload = await apiRequest(`/donations/admin/list${query(params)}`);
+	return toPage(payload, normalizeDonation);
+}
+
+export async function getAdminDonationStats(): Promise<AdminDonationStats> {
+	const payload = await apiRequest('/donations/admin/stats');
+	const raw: Record<string, unknown> = isRecord(payload) ? payload : {};
+	const top = Array.isArray(raw.topCampanas) ? raw.topCampanas : [];
+	return {
+		total: pickNumber(raw, ['total']),
+		aprobadas: pickNumber(raw, ['aprobadas']),
+		pendientes: pickNumber(raw, ['pendientes']),
+		recaudado: pickString(raw, ['recaudado']),
+		recaudadoCents: pickNumber(raw, ['recaudadoCents', 'recaudado_cents']),
+		fondoGeneral: pickString(raw, ['fondoGeneral', 'fondo_general']),
+		fondoGeneralCents: pickNumber(raw, ['fondoGeneralCents', 'fondo_general_cents']),
+		porCampana: pickString(raw, ['porCampana', 'por_campana']),
+		porCampanaCents: pickNumber(raw, ['porCampanaCents', 'por_campana_cents']),
+		topCampanas: top.filter(isRecord).map((row) => ({
+			campaignId: pickString(row, ['campaignId', 'campaign_id']),
+			title: pickString(row, ['title']),
+			raisedCents: pickNumber(row, ['raisedCents', 'raised_cents']),
+			donors: pickNumber(row, ['donors'])
+		}))
+	};
 }
 
 /* — Categorías — */
