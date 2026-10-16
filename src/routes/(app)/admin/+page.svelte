@@ -175,19 +175,21 @@
 {:else if groups.length === 0}
 	<p class="ad-state">No hay métricas disponibles.</p>
 {:else}
-	{#each groups as group (group.key)}
-		<section class="ad-group">
-			<h2 class="ad-group-title">{group.label}</h2>
-			<div class="ad-stats">
-				{#each group.metrics as metric (metric.key)}
-					<article class="ad-stat">
-						<p class="ad-stat-label">{metric.label}</p>
-						<p class="ad-stat-value">{formatValue(metric)}</p>
-					</article>
-				{/each}
-			</div>
-		</section>
-	{/each}
+	<div class="ad-board">
+		{#each groups as group (group.key)}
+			<article class="board-panel">
+				<h2 class="board-title">{group.label}</h2>
+				<div class="board-metrics">
+					{#each group.metrics as metric (metric.key)}
+						<div class="board-metric">
+							<span class="board-label">{metric.label}</span>
+							<strong class="board-value">{formatValue(metric)}</strong>
+						</div>
+					{/each}
+				</div>
+			</article>
+		{/each}
+	</div>
 {/if}
 
 <section class="ad-card chart-card">
@@ -240,6 +242,75 @@
 {/if}
 
 <style>
+	/* Tablero de métricas: cada grupo es un panel y los paneles se reparten
+	   el ancho disponible (3-4 por fila en escritorio, 1 en móvil). */
+	.ad-board {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+		gap: 14px;
+		align-items: stretch;
+		margin-top: 4px;
+	}
+
+	.board-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		padding: 18px;
+		border: 1px solid var(--iz-line);
+		border-radius: var(--iz-radius-md);
+		background: var(--iz-surface);
+		box-shadow: var(--iz-shadow-sm);
+	}
+
+	.board-title {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0;
+		color: var(--iz-ink-soft);
+		font-size: 11.5px;
+		font-weight: 700;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+	}
+
+	.board-title::before {
+		width: 7px;
+		height: 7px;
+		flex: 0 0 auto;
+		border-radius: 50%;
+		background: var(--iz-green-600);
+		content: '';
+	}
+
+	.board-metrics {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+		gap: 14px 16px;
+	}
+
+	.board-metric {
+		display: flex;
+		min-width: 0;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.board-label {
+		color: var(--iz-muted);
+		font-size: 11.5px;
+		line-height: 1.3;
+	}
+
+	.board-value {
+		color: var(--iz-ink);
+		font-size: 24px;
+		font-weight: 700;
+		letter-spacing: -0.6px;
+		overflow-wrap: anywhere;
+	}
+
 	.ad-quick {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
