@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { getAccessToken, logout } from '#lib/services/auth/auth.service.js';
@@ -46,6 +46,7 @@
 	let menuOpen = $state(false);
 	let panelOpen = $state(false);
 	let navOpen = $state(false);
+	let navSearchInput = $state<HTMLInputElement | null>(null);
 	let unreadCount = $state(0);
 	let notifications = $state<NotificationItem[]>([]);
 	let isLoadingNotifications = $state(false);
@@ -108,10 +109,15 @@
 		if (panelOpen) await loadNotifications();
 	}
 
-	function toggleNav() {
+	async function toggleNav() {
 		menuOpen = false;
 		panelOpen = false;
 		navOpen = !navOpen;
+		if (navOpen) {
+			// Al abrir el menú, el foco va al buscador (solo visible en el desplegable).
+			await tick();
+			navSearchInput?.focus();
+		}
 	}
 
 	async function handleNotificationClick(item: NotificationItem) {
@@ -190,6 +196,7 @@
 						name="nav-q"
 						placeholder="Buscar en Izeco…"
 						aria-label="Buscar en Izeco"
+						bind:this={navSearchInput}
 						bind:value={searchTerm}
 					/>
 				</form>
