@@ -45,6 +45,7 @@
 	let isReady = $state(false);
 	let menuOpen = $state(false);
 	let panelOpen = $state(false);
+	let navOpen = $state(false);
 	let unreadCount = $state(0);
 	let notifications = $state<NotificationItem[]>([]);
 	let isLoadingNotifications = $state(false);
@@ -102,8 +103,15 @@
 
 	async function togglePanel() {
 		menuOpen = false;
+		navOpen = false;
 		panelOpen = !panelOpen;
 		if (panelOpen) await loadNotifications();
+	}
+
+	function toggleNav() {
+		menuOpen = false;
+		panelOpen = false;
+		navOpen = !navOpen;
 	}
 
 	async function handleNotificationClick(item: NotificationItem) {
@@ -131,12 +139,14 @@
 		const term = searchTerm.trim();
 		menuOpen = false;
 		panelOpen = false;
+		navOpen = false;
 		await goto(term ? `/catalogo?q=${encodeURIComponent(term)}` : '/catalogo');
 	}
 
 	async function handleLogout() {
 		menuOpen = false;
 		panelOpen = false;
+		navOpen = false;
 		logout();
 		clearSession();
 		await goto('/');
@@ -150,8 +160,12 @@
 	/>
 </svelte:head>
 
-{#if panelOpen || menuOpen}
-	<button class="scrim" type="button" aria-label="Cerrar" onclick={() => (panelOpen = false, menuOpen = false)}
+{#if panelOpen || menuOpen || navOpen}
+	<button
+		class="scrim"
+		type="button"
+		aria-label="Cerrar el menú"
+		onclick={() => ((panelOpen = false), (menuOpen = false), (navOpen = false))}
 	></button>
 {/if}
 
@@ -165,10 +179,28 @@
 
 			<span class="brand-divider" aria-hidden="true"></span>
 
-			<nav class="main-nav" aria-label="Navegación principal">
+			<nav class="main-nav" class:open={navOpen} id="main-nav" aria-label="Navegación principal">
+				<form class="nav-search" onsubmit={handleSearch} role="search">
+					<svg viewBox="0 0 20 20" aria-hidden="true">
+						<circle cx="9" cy="9" r="5.2" />
+						<path d="m13 13 4 4" />
+					</svg>
+					<input
+						type="search"
+						name="nav-q"
+						placeholder="Buscar en Izeco…"
+						aria-label="Buscar en Izeco"
+						bind:value={searchTerm}
+					/>
+				</form>
+
 				<div class="nav-track">
 					{#each navItems as item (item.href)}
-						<a class:active={isActive(item.href)} href={item.href}>
+						<a
+							class:active={isActive(item.href)}
+							href={item.href}
+							onclick={() => (navOpen = false)}
+						>
 							{item.label}
 							{#if item.dot}
 								<span class="nav-dot" aria-hidden="true"></span>
@@ -278,7 +310,7 @@
 						type="button"
 						aria-haspopup="menu"
 						aria-expanded={menuOpen}
-						onclick={() => (menuOpen = !menuOpen, panelOpen = false)}
+						onclick={() => ((menuOpen = !menuOpen), (panelOpen = false), (navOpen = false))}
 					>
 						<span class="avatar" aria-hidden="true">{initials(session.user?.name ?? '')}</span>
 						<span class="user-meta">
@@ -301,6 +333,21 @@
 					{/if}
 				</div>
 			</div>
+
+			<button
+				class="nav-toggle"
+				type="button"
+				aria-label={navOpen ? 'Cerrar el menú' : 'Abrir el menú'}
+				aria-expanded={navOpen}
+				aria-controls="main-nav"
+				onclick={toggleNav}
+			>
+				{#if navOpen}
+					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 5.5 9 9M14.5 5.5l-9 9" /></svg>
+				{:else}
+					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 6h13M3.5 10h13M3.5 14h13" /></svg>
+				{/if}
+			</button>
 		</div>
 	</header>
 
