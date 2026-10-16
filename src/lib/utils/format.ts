@@ -36,6 +36,17 @@ export function formatLongDate(date: Date = new Date()): string {
 	return DATE_FORMATTER.format(date).replace('.', '');
 }
 
+// Versión compacta para la barra superior: "15 oct".
+const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat('es-CO', {
+	day: 'numeric',
+	month: 'short'
+});
+
+export function formatShortDate(date: Date = new Date()): string {
+	// es-CO produce "15 de oct"; lo dejamos en "15 oct" para la barra.
+	return SHORT_DATE_FORMATTER.format(date).replace('.', '').replace(/ de /g, ' ');
+}
+
 export function formatDateTimeParts(value: string | null): { day: string; time: string } {
 	if (!value) return { day: '', time: '' };
 	const date = new Date(value);

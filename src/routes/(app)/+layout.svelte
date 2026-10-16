@@ -11,7 +11,7 @@
 		type NotificationItem
 	} from '#lib/services/api/api.service.js';
 	import {
-		formatLongDate,
+		formatShortDate,
 		formatRelativeTime,
 		formatRole,
 		initials,
@@ -51,7 +51,7 @@
 	let isLoadingNotifications = $state(false);
 	let notificationsError = $state('');
 	let searchTerm = $state('');
-	let currentDate = $state(formatLongDate());
+	let currentDate = $state(formatShortDate());
 
 	onMount(() => {
 		if (!getAccessToken()) {
@@ -60,7 +60,7 @@
 		}
 
 		isReady = true;
-		currentDate = formatLongDate();
+		currentDate = formatShortDate();
 		void loadSession().then(() => {
 			if (session.expired) {
 				logout();
@@ -219,7 +219,7 @@
 					<input
 						type="search"
 						name="q"
-						placeholder="Buscar en Izeco…"
+						placeholder="Buscar…"
 						aria-label="Buscar en Izeco"
 						bind:value={searchTerm}
 					/>
@@ -381,7 +381,7 @@
 		display: flex;
 		max-width: 1480px;
 		align-items: center;
-		gap: 12px;
+		gap: 8px;
 		margin: 0 auto;
 		padding: 12px 26px;
 	}
@@ -445,8 +445,8 @@
 		position: relative;
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
-		padding: 6px 12px;
+		gap: 5px;
+		padding: 4px 9px;
 		border-radius: 10px;
 		color: var(--iz-muted);
 		font-size: 12.5px;
@@ -532,13 +532,13 @@
 		display: flex;
 		flex: 0 0 auto;
 		align-items: center;
-		gap: 14px;
+		gap: 8px;
 		margin-left: auto;
 	}
 
 	.search {
 		display: flex;
-		width: 258px;
+		width: 200px;
 		align-items: center;
 		gap: 8px;
 		padding: 8px 12px;
@@ -900,15 +900,15 @@
 		text-align: center;
 	}
 
-	@media (max-width: 1440px) {
-		.today {
-			display: none;
+	@media (max-width: 1400px) {
+		.search {
+			width: 150px;
 		}
 	}
 
-	@media (max-width: 1180px) {
+	@media (max-width: 1280px) {
 		.search {
-			width: 190px;
+			width: 120px;
 		}
 
 		.user-meta {
@@ -917,7 +917,7 @@
 	}
 
 	/* Colapsa la navegación en un menú desplegable (hamburguesa). */
-	@media (max-width: 1080px) {
+	@media (max-width: 1130px) {
 		.header-inner {
 			gap: 10px;
 			padding: 10px 16px;
