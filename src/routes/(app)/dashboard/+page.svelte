@@ -61,7 +61,7 @@
 				getMyPayments({ limit: 50 }),
 				getMyVolunteerSignups({ limit: 50 }),
 				getMyNotifications({ limit: 3 }),
-				getPublicProducts({ limit: 3 }),
+				getPublicProducts({ limit: 3, type: 'artesania' }),
 				getPublicVolunteerActivities({ limit: 3 })
 			]);
 

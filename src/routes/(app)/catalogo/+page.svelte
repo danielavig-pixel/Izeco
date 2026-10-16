@@ -105,7 +105,8 @@
 				page: 1,
 				limit: PAGE_SIZE,
 				q: term || undefined,
-				categoryId: slug ? categoryIdBySlug.get(slug) : undefined
+				categoryId: slug ? categoryIdBySlug.get(slug) : undefined,
+				type: 'artesania'
 			});
 			products = result.items;
 			totalPages = result.totalPages;
@@ -126,7 +127,8 @@
 				page: pageNumber + 1,
 				limit: PAGE_SIZE,
 				q: searchTerm || undefined,
-				categoryId: categorySlug ? categoryIdBySlug.get(categorySlug) : undefined
+				categoryId: categorySlug ? categoryIdBySlug.get(categorySlug) : undefined,
+				type: 'artesania'
 			});
 			products = [...products, ...result.items];
 			pageNumber += 1;

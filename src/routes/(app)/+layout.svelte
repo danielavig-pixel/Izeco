@@ -21,13 +21,21 @@
 
 	let { children } = $props();
 
-	const navItems = [
+	const baseNavItems = [
 		{ label: 'Inicio', href: '/dashboard', dot: false },
 		{ label: 'Catálogo', href: '/catalogo', dot: false },
+		{ label: 'Materia prima', href: '/materia-prima', dot: false },
 		{ label: 'Emprendimientos', href: '/emprendimientos', dot: false },
 		{ label: 'Campañas', href: '/campanas', dot: false },
 		{ label: 'Jornadas', href: '/jornadas', dot: false }
 	];
+
+	// El acceso al panel solo aparece para administradores.
+	const navItems = $derived(
+		session.user?.role === 'admin'
+			? [...baseNavItems, { label: 'Administración', href: '/admin', dot: false }]
+			: baseNavItems
+	);
 
 	let isReady = $state(false);
 	let menuOpen = $state(false);

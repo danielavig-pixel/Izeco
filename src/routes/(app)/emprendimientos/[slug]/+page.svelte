@@ -30,7 +30,11 @@
 		try {
 			const found = await getPublicEntrepreneurBySlug(currentSlug);
 			socio = found;
-			const catalog = await getPublicProducts({ entrepreneurId: found.id, limit: 12 });
+			const catalog = await getPublicProducts({
+				entrepreneurId: found.id,
+				limit: 12,
+				type: 'artesania'
+			});
 			products = catalog.items;
 		} catch (error) {
 			errorMessage =

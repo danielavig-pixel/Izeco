@@ -75,6 +75,9 @@ export interface Product {
 	/** Todas las imágenes del producto (galería). */
 	images: string[];
 	slug: string;
+	/** "artesania" (socios) o "materia_prima" (plataforma). */
+	type: string;
+	isRawMaterial: boolean;
 }
 
 export interface VolunteerActivity {
@@ -393,7 +396,13 @@ function normalizeProduct(raw: unknown): Product | null {
 			pickString(entrepreneur, ['name', 'title', 'businessName']) ||
 			pickString(raw, ['entrepreneurName', 'businessName', 'sellerName']),
 		imageUrl: firstImage(raw),
-		slug: pickString(raw, ['slug'])
+		slug: pickString(raw, ['slug']),
+		type:
+			pickString(raw, ['type', 'productType', 'kind']).toLowerCase() ||
+			(pickBoolean(raw, ['isRawMaterial', 'rawMaterial']) ? 'materia_prima' : 'artesania'),
+		isRawMaterial:
+			pickBoolean(raw, ['isRawMaterial', 'rawMaterial']) ||
+			pickString(raw, ['type', 'productType', 'kind']).toLowerCase() === 'materia_prima'
 	};
 }
 
@@ -746,6 +755,7 @@ export async function getPublicProducts(
 		q?: string;
 		categoryId?: string;
 		entrepreneurId?: string;
+		type?: string;
 	} = {}
 ): Promise<Paginated<Product>> {
 	const payload = await apiRequest(`/products/public${query(params)}`, { auth: false });
@@ -863,4 +873,759 @@ export async function getPublicEntrepreneurBySlug(slug: string): Promise<Entrepr
 	const entrepreneur = normalizeEntrepreneur(record);
 	if (!entrepreneur) throw new ApiServiceError('No se pudo leer este emprendimiento.', 404);
 	return entrepreneur;
+}
+
+/* ------------------------------------------------------------------ */
+/* Administración                                                      */
+/* ------------------------------------------------------------------ */
+
+export interface ReportRange {
+	from?: string;
+	to?: string;
+	tz?: string;
+}
+
+/** Usuario del listado de administración, con contadores de actividad. */
+export interface AdminUser extends UserProfile {
+	entrepreneurs?: number;
+	products?: number;
+	payments?: number;
+}
+
+/** Producto visto desde el panel de moderación (cualquier estado). */
+export interface AdminProduct {
+	id: string;
+	name: string;
+	description: string;
+	priceCents: number;
+	currencyCode: string;
+	status: string;
+	isActive: boolean;
+	isArchived: boolean;
+	/** null = sin stock finito (o no informado por el endpoint). */
+	stock: number | null;
+	imageUrl: string;
+	categoryName: string;
+	entrepreneurId: string;
+	entrepreneurName: string;
+	createdAt: string | null;
+	/** "artesania" o "materia_prima". */
+	type: string;
+	isRawMaterial: boolean;
+}
+
+/** Inscripción a una jornada con los datos del voluntario. */
+export interface AdminSignup {
+	id: string;
+	activityId: string;
+	activityTitle: string;
+	status: string;
+	note: string;
+	volunteerId: string;
+	volunteerName: string;
+	volunteerEmail: string;
+	createdAt: string | null;
+}
+
+/** Material recolectado, con su cantidad en unidad base de la API. */
+export interface AdminCollection {
+	id: string;
+	activityId: string;
+	activityTitle: string;
+	material: string;
+	materialName: string;
+	quantity: number;
+	unit: string;
+	label: string;
+	rawMaterialProductId: string;
+	rawMaterialProductName: string;
+	collectedAt: string | null;
+	notes: string;
+}
+
+export interface CollectionSummaryRow {
+	material: string;
+	materialName: string;
+	unit: string;
+	label: string;
+	total: number;
+}
+
+export interface AdminPayment extends Payment {
+	buyerName: string;
+	buyerEmail: string;
+	sellerName: string;
+	refundedCents: number;
+}
+
+export const COLLECTION_UNITS: { value: string; label: string }[] = [
+	{ value: 'kg', label: 'Kilogramos (kg)' },
+	{ value: 'unidad', label: 'Unidades' },
+	{ value: 'bulto', label: 'Bultos' }
+];
+
+export const MATERIAL_OPTIONS: { value: string; label: string }[] = Object.entries(
+	MATERIAL_LABELS
+).map(([value, label]) => ({ value, label }));
+
+/** Convierte la cantidad en unidad base (gramos/piezas) a un texto legible. */
+export function collectionQuantityLabel(quantity: number, unit: string): string {
+	if (!Number.isFinite(quantity)) return '';
+	if (unit === 'kg') {
+		return `${(quantity / 1000).toLocaleString('es-CO', { maximumFractionDigits: 2 })} kg`;
+	}
+	if (unit === 'unidad') return `${quantity.toLocaleString('es-CO')} unidades`;
+	if (unit === 'bulto') return `${quantity.toLocaleString('es-CO')} bultos`;
+	return quantity.toLocaleString('es-CO');
+}
+
+function normalizeAdminUser(raw: unknown): AdminUser | null {
+	const base = normalizeUser(raw);
+	if (!base) return null;
+	const record = isRecord(raw) ? raw : null;
+	return {
+		...base,
+		entrepreneurs:
+			pickNullableNumber(record, ['entrepreneursCount', 'entrepreneurshipsCount', 'entrepreneurships']) ??
+			undefined,
+		products: pickNullableNumber(record, ['productsCount', 'products']) ?? undefined,
+		payments: pickNullableNumber(record, ['paymentsCount', 'payments']) ?? undefined
+	};
+}
+
+function normalizeAdminProduct(raw: unknown): AdminProduct | null {
+	if (!isRecord(raw)) return null;
+	const name = pickString(raw, ['name', 'title', 'productName']);
+	if (!name) return null;
+
+	const category = isRecord(raw.category) ? raw.category : null;
+	const entrepreneur = isRecord(raw.entrepreneur)
+		? raw.entrepreneur
+		: isRecord(raw.entrepreneurship)
+			? raw.entrepreneurship
+			: isRecord(raw.seller)
+				? raw.seller
+				: null;
+	const status = pickString(raw, ['status', 'state', 'publicationStatus']).toLowerCase();
+
+	return {
+		id: pickString(raw, ['id', 'productId', 'uuid']),
+		name,
+		description: pickString(raw, ['description', 'summary']),
+		priceCents: pickNumber(raw, ['priceCents', 'price_cents', 'price']),
+		currencyCode: pickString(raw, ['currencyCode', 'currency_code', 'currency']) || 'COP',
+		status: status || (pickBoolean(raw, ['isPublished', 'published']) ? 'publicado' : 'borrador'),
+		isActive: pickBoolean(raw, ['isActive', 'active']),
+		isArchived:
+			pickBoolean(raw, ['isArchived', 'archived', 'deleted', 'isDeleted']) ||
+			Boolean(pickDate(raw, ['archivedAt', 'deletedAt'])),
+		stock: pickNullableNumber(raw, ['stock']),
+		imageUrl: firstImage(raw),
+		categoryName:
+			pickString(category, ['name', 'title']) || pickString(raw, ['categoryName', 'category']),
+		entrepreneurId: pickString(raw, ['entrepreneurId', 'entrepreneur_id']),
+		entrepreneurName:
+			pickString(entrepreneur, ['name', 'title', 'businessName']) ||
+			pickString(raw, ['entrepreneurName', 'businessName', 'sellerName']),
+		createdAt: pickDate(raw, ['createdAt', 'created_at']),
+		type:
+			pickString(raw, ['type', 'productType', 'kind']).toLowerCase() ||
+			(pickBoolean(raw, ['isRawMaterial', 'rawMaterial']) ? 'materia_prima' : 'artesania'),
+		isRawMaterial:
+			pickBoolean(raw, ['isRawMaterial', 'rawMaterial']) ||
+			pickString(raw, ['type', 'productType', 'kind']).toLowerCase() === 'materia_prima'
+	};
+}
+
+function normalizeAdminSignup(raw: unknown): AdminSignup | null {
+	if (!isRecord(raw)) return null;
+	const id = pickString(raw, ['id', 'signupId', 'uuid']);
+	const activityId = pickString(raw, ['activityId', 'activity_id']);
+	if (!id && !activityId) return null;
+
+	const volunteer =
+		(isRecord(raw.volunteer) && raw.volunteer) ||
+		(isRecord(raw.user) && raw.user) ||
+		(isRecord(raw.volunteerUser) && raw.volunteerUser) ||
+		null;
+	const activity =
+		(isRecord(raw.activity) && raw.activity) ||
+		(isRecord(raw.volunteerActivity) && raw.volunteerActivity) ||
+		(isRecord(raw.jornada) && raw.jornada) ||
+		null;
+
+	return {
+		id,
+		activityId,
+		activityTitle:
+			pickString(raw, ['activityTitle', 'activity_title']) ||
+			pickString(activity, ['title', 'name']),
+		status: pickString(raw, ['status', 'state']).toLowerCase(),
+		note: pickString(raw, ['note', 'reason', 'reviewNote']),
+		volunteerId: pickString(raw, ['volunteerId', 'userId']) || pickString(volunteer, ['id', 'userId']),
+		volunteerName:
+			pickString(raw, ['volunteerName', 'userName']) || pickString(volunteer, ['name', 'fullName']),
+		volunteerEmail:
+			pickString(raw, ['volunteerEmail', 'userEmail']) || pickString(volunteer, ['email']),
+		createdAt: pickDate(raw, ['createdAt', 'created_at', 'signedUpAt', 'date'])
+	};
+}
+
+function normalizeAdminCollection(raw: unknown): AdminCollection | null {
+	if (!isRecord(raw)) return null;
+	const material = pickString(raw, ['material', 'materialType']).toLowerCase();
+	const quantity = pickNumber(raw, ['quantity', 'amount', 'weight']);
+	const unit = pickString(raw, ['unit', 'measureUnit']).toLowerCase();
+	if (!material && !quantity) return null;
+
+	const activity =
+		(isRecord(raw.activity) && raw.activity) ||
+		(isRecord(raw.volunteerActivity) && raw.volunteerActivity) ||
+		null;
+	const rawProduct = isRecord(raw.rawMaterialProduct) ? raw.rawMaterialProduct : null;
+
+	return {
+		id: pickString(raw, ['id', 'collectionId']),
+		activityId: pickString(raw, ['activityId', 'activity_id']) || pickString(activity, ['id']),
+		activityTitle:
+			pickString(raw, ['activityTitle', 'activity_title']) || pickString(activity, ['title', 'name']),
+		material,
+		materialName: materialLabel(material),
+		quantity,
+		unit,
+		label: collectionQuantityLabel(quantity, unit),
+		rawMaterialProductId:
+			pickString(raw, ['rawMaterialProductId']) || pickString(rawProduct, ['id']),
+		rawMaterialProductName:
+			pickString(raw, ['rawMaterialProductName']) || pickString(rawProduct, ['name']),
+		collectedAt: pickDate(raw, ['collectedAt', 'collected_at', 'date']),
+		notes: pickString(raw, ['notes', 'note'])
+	};
+}
+
+function normalizeCollectionSummary(raw: unknown): CollectionSummaryRow | null {
+	if (!isRecord(raw)) return null;
+	const material = (pickString(raw, ['material', 'materialType']) || '').toLowerCase();
+	const unit = (pickString(raw, ['unit']) || '').toLowerCase();
+	const total = pickNumber(raw, ['total', 'quantity', 'sum', 'amount', 'totalQuantity']);
+	if (!material && !unit) return null;
+	return {
+		material,
+		materialName: materialLabel(material),
+		unit,
+		total,
+		label: collectionQuantityLabel(total, unit)
+	};
+}
+
+function normalizeAdminPayment(raw: unknown): AdminPayment | null {
+	const base = normalizePayment(raw);
+	if (!base || !isRecord(raw)) return null;
+	const buyer =
+		(isRecord(raw.buyer) && raw.buyer) ||
+		(isRecord(raw.user) && raw.user) ||
+		(isRecord(raw.customer) && raw.customer) ||
+		null;
+	const seller =
+		(isRecord(raw.seller) && raw.seller) ||
+		(isRecord(raw.entrepreneur) && raw.entrepreneur) ||
+		null;
+
+	return {
+		...base,
+		buyerName:
+			pickString(raw, ['buyerName', 'userName', 'customerName']) ||
+			pickString(buyer, ['name', 'fullName']),
+		buyerEmail:
+			pickString(raw, ['buyerEmail', 'userEmail', 'customerEmail']) || pickString(buyer, ['email']),
+		sellerName:
+			pickString(raw, ['sellerName', 'entrepreneurName']) || pickString(seller, ['name', 'businessName']),
+		refundedCents: pickNumber(raw, ['refundedCents', 'refunded_cents', 'refunded'])
+	};
+}
+
+function reportQuery(params: ReportRange): string {
+	return query({ from: params.from, to: params.to, tz: params.tz });
+}
+
+/* — Resumen y reportes — */
+
+export async function getAdminOverview(): Promise<Record<string, unknown> | null> {
+	const payload = await apiRequest('/admin/overview');
+	return isRecord(payload) ? payload : null;
+}
+
+export async function getAdminActivityReport(
+	params: ReportRange = {}
+): Promise<Record<string, unknown> | null> {
+	const payload = await apiRequest(`/admin/reports/activity${reportQuery(params)}`);
+	return isRecord(payload) ? payload : null;
+}
+
+export async function getAdminUsersReport(
+	params: ReportRange = {}
+): Promise<Record<string, unknown> | null> {
+	const payload = await apiRequest(`/admin/reports/users${reportQuery(params)}`);
+	return isRecord(payload) ? payload : null;
+}
+
+export async function getAdminEntrepreneursReport(
+	params: ReportRange = {}
+): Promise<Record<string, unknown> | null> {
+	const payload = await apiRequest(`/admin/reports/entrepreneurs${reportQuery(params)}`);
+	return isRecord(payload) ? payload : null;
+}
+
+export async function getAdminPaymentsReport(
+	params: ReportRange = {}
+): Promise<Record<string, unknown> | null> {
+	const payload = await apiRequest(`/admin/reports/payments${reportQuery(params)}`);
+	return isRecord(payload) ? payload : null;
+}
+
+export async function getAdminVolunteerReport(
+	params: ReportRange = {}
+): Promise<Record<string, unknown> | null> {
+	const payload = await apiRequest(`/admin/reports/volunteer${reportQuery(params)}`);
+	return isRecord(payload) ? payload : null;
+}
+
+/* — Usuarios — */
+
+export async function getAdminUsers(
+	params: {
+		page?: number;
+		limit?: number;
+		role?: string;
+		q?: string;
+		isActive?: boolean;
+	} = {}
+): Promise<Paginated<AdminUser>> {
+	const payload = await apiRequest(
+		`/admin/users${query({
+			page: params.page,
+			limit: params.limit,
+			role: params.role,
+			q: params.q,
+			isActive: params.isActive === undefined ? undefined : params.isActive ? 'true' : 'false'
+		})}`
+	);
+	return toPage(payload, normalizeAdminUser);
+}
+
+export async function getAdminUser(
+	id: string
+): Promise<{ user: UserProfile; raw: Record<string, unknown> }> {
+	const payload = await apiRequest(`/admin/users/${encodeURIComponent(id)}`);
+	const record = isRecord(payload) && isRecord(payload.user) ? payload.user : payload;
+	const user = normalizeUser(record);
+	if (!user) throw new ApiServiceError('No se pudo leer este usuario.');
+	return { user, raw: isRecord(payload) ? payload : {} };
+}
+
+export async function changeAdminUserRole(id: string, role: string): Promise<void> {
+	await apiRequest(`/admin/users/${encodeURIComponent(id)}/role`, {
+		method: 'PATCH',
+		body: { role }
+	});
+}
+
+export async function changeAdminUserStatus(
+	id: string,
+	isActive: boolean,
+	reason = ''
+): Promise<void> {
+	await apiRequest(`/admin/users/${encodeURIComponent(id)}/status`, {
+		method: 'PATCH',
+		body: { isActive, reason: reason || undefined }
+	});
+}
+
+/* — Moderación de productos — */
+
+export async function getModerationProducts(
+	params: {
+		page?: number;
+		limit?: number;
+		status?: string;
+		q?: string;
+		includeArchived?: boolean;
+		type?: string;
+	} = {}
+): Promise<Paginated<AdminProduct>> {
+	const payload = await apiRequest(
+		`/admin/moderation/products${query({
+			page: params.page,
+			limit: params.limit,
+			status: params.status,
+			q: params.q,
+			includeArchived: params.includeArchived ? 'true' : undefined,
+			type: params.type
+		})}`
+	);
+	return toPage(payload, normalizeAdminProduct);
+}
+
+export async function adminUnpublishProduct(id: string): Promise<void> {
+	await apiRequest(`/admin/moderation/products/${encodeURIComponent(id)}/unpublish`, {
+		method: 'POST'
+	});
+}
+
+export async function adminRestoreProduct(id: string): Promise<void> {
+	await apiRequest(`/admin/moderation/products/${encodeURIComponent(id)}/restore`, {
+		method: 'POST'
+	});
+}
+
+/* — Materia prima (la vende la plataforma) — */
+
+export interface RawMaterialInput {
+	name: string;
+	description: string;
+	/** Precio en centavos (unidad menor). */
+	priceCents: number;
+	categoryId: string;
+	stock?: number;
+	images?: string[];
+	isActive?: boolean;
+}
+
+export async function getAdminRawMaterials(
+	params: {
+		page?: number;
+		limit?: number;
+		status?: string;
+		q?: string;
+		includeArchived?: boolean;
+	} = {}
+): Promise<Paginated<AdminProduct>> {
+	const payload = await apiRequest(
+		`/admin/raw-materials${query({
+			page: params.page,
+			limit: params.limit,
+			status: params.status,
+			q: params.q,
+			includeArchived: params.includeArchived ? 'true' : undefined
+		})}`
+	);
+	return toPage(payload, normalizeAdminProduct);
+}
+
+export async function createAdminRawMaterial(input: RawMaterialInput): Promise<AdminProduct> {
+	const payload = await apiRequest('/admin/raw-materials', { method: 'POST', body: input });
+	const material = normalizeAdminProduct(payload);
+	if (!material) throw new ApiServiceError('No se pudo crear la materia prima.');
+	return material;
+}
+
+export async function updateAdminRawMaterial(
+	id: string,
+	input: Partial<RawMaterialInput>
+): Promise<AdminProduct> {
+	const payload = await apiRequest(`/admin/raw-materials/${encodeURIComponent(id)}`, {
+		method: 'PATCH',
+		body: input
+	});
+	const material = normalizeAdminProduct(payload);
+	if (!material) throw new ApiServiceError('No se pudo actualizar la materia prima.');
+	return material;
+}
+
+export async function publishAdminRawMaterial(id: string): Promise<void> {
+	await apiRequest(`/admin/raw-materials/${encodeURIComponent(id)}/publish`, { method: 'POST' });
+}
+
+export async function unpublishAdminRawMaterial(id: string): Promise<void> {
+	await apiRequest(`/admin/raw-materials/${encodeURIComponent(id)}/unpublish`, { method: 'POST' });
+}
+
+export async function archiveAdminRawMaterial(id: string): Promise<void> {
+	await apiRequest(`/admin/raw-materials/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function restoreAdminRawMaterial(id: string): Promise<void> {
+	await apiRequest(`/admin/raw-materials/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+}
+
+/* — Emprendimientos (revisión) — */
+
+export async function getEntrepreneurReviewQueue(
+	params: { page?: number; limit?: number; q?: string } = {}
+): Promise<Paginated<Entrepreneur>> {
+	const payload = await apiRequest(`/entrepreneurs/admin/review${query(params)}`);
+	return toPage(payload, normalizeEntrepreneur);
+}
+
+export async function getArchivedEntrepreneurs(
+	params: { page?: number; limit?: number } = {}
+): Promise<Paginated<Entrepreneur>> {
+	const payload = await apiRequest(`/entrepreneurs/admin/archived${query(params)}`);
+	return toPage(payload, normalizeEntrepreneur);
+}
+
+export async function reviewEntrepreneur(
+	id: string,
+	action: 'approve' | 'reject' | 'suspend',
+	note = ''
+): Promise<void> {
+	await apiRequest(`/entrepreneurs/${encodeURIComponent(id)}/${action}`, {
+		method: 'POST',
+		body: { note: note || undefined }
+	});
+}
+
+export async function restoreEntrepreneur(id: string): Promise<void> {
+	await apiRequest(`/entrepreneurs/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+}
+
+/* — Campañas — */
+
+export interface CampaignInput {
+	title: string;
+	summary?: string;
+	description: string;
+	imageUrl?: string;
+	goalCents?: number;
+	donationUrl?: string;
+	startsAt?: string;
+	endsAt?: string;
+}
+
+export async function getAdminCampaigns(
+	params: { page?: number; limit?: number; status?: string } = {}
+): Promise<Paginated<Campaign>> {
+	const payload = await apiRequest(`/campaigns${query(params)}`);
+	return toPage(payload, normalizeCampaign);
+}
+
+export async function getArchivedCampaigns(
+	params: { page?: number; limit?: number } = {}
+): Promise<Paginated<Campaign>> {
+	const payload = await apiRequest(`/campaigns/admin/archived${query(params)}`);
+	return toPage(payload, normalizeCampaign);
+}
+
+export async function createCampaign(input: CampaignInput): Promise<void> {
+	await apiRequest('/campaigns', { method: 'POST', body: input });
+}
+
+export async function updateCampaign(id: string, input: Partial<CampaignInput>): Promise<void> {
+	await apiRequest(`/campaigns/${encodeURIComponent(id)}`, { method: 'PATCH', body: input });
+}
+
+export async function publishCampaign(id: string): Promise<void> {
+	await apiRequest(`/campaigns/${encodeURIComponent(id)}/publish`, { method: 'POST' });
+}
+
+export async function closeCampaign(id: string): Promise<void> {
+	await apiRequest(`/campaigns/${encodeURIComponent(id)}/close`, { method: 'POST' });
+}
+
+export async function notifyCampaign(id: string): Promise<void> {
+	await apiRequest(`/campaigns/${encodeURIComponent(id)}/notify`, { method: 'POST' });
+}
+
+export async function archiveCampaign(id: string): Promise<void> {
+	await apiRequest(`/campaigns/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function restoreCampaign(id: string): Promise<void> {
+	await apiRequest(`/campaigns/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+}
+
+/* — Voluntariados — */
+
+export interface VolunteerInput {
+	title: string;
+	description: string;
+	location?: string;
+	startsAt: string;
+	endsAt?: string;
+	slots?: number;
+	imageUrl?: string;
+}
+
+export async function getAdminVolunteerActivities(
+	params: { page?: number; limit?: number; status?: string } = {}
+): Promise<Paginated<VolunteerActivity>> {
+	const payload = await apiRequest(`/volunteer${query(params)}`);
+	return toPage(payload, normalizeVolunteer);
+}
+
+export async function getArchivedVolunteerActivities(
+	params: { page?: number; limit?: number } = {}
+): Promise<Paginated<VolunteerActivity>> {
+	const payload = await apiRequest(`/volunteer/admin/archived${query(params)}`);
+	return toPage(payload, normalizeVolunteer);
+}
+
+export async function createVolunteerActivity(input: VolunteerInput): Promise<void> {
+	await apiRequest('/volunteer', { method: 'POST', body: input });
+}
+
+export async function updateVolunteerActivity(
+	id: string,
+	input: Partial<VolunteerInput>
+): Promise<void> {
+	await apiRequest(`/volunteer/${encodeURIComponent(id)}`, { method: 'PATCH', body: input });
+}
+
+export async function archiveVolunteerActivity(id: string): Promise<void> {
+	await apiRequest(`/volunteer/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function openVolunteerActivity(id: string): Promise<void> {
+	await apiRequest(`/volunteer/${encodeURIComponent(id)}/open`, { method: 'POST' });
+}
+
+export async function closeVolunteerActivity(id: string): Promise<void> {
+	await apiRequest(`/volunteer/${encodeURIComponent(id)}/close`, { method: 'POST' });
+}
+
+export async function finishVolunteerActivity(id: string): Promise<void> {
+	await apiRequest(`/volunteer/${encodeURIComponent(id)}/finish`, { method: 'POST' });
+}
+
+export async function restoreVolunteerActivity(id: string): Promise<void> {
+	await apiRequest(`/volunteer/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+}
+
+export async function getAdminSignups(
+	params: { page?: number; limit?: number; status?: string; activityId?: string } = {}
+): Promise<Paginated<AdminSignup>> {
+	const payload = await apiRequest(`/volunteer/admin/signups${query(params)}`);
+	return toPage(payload, normalizeAdminSignup);
+}
+
+export async function confirmVolunteerSignup(id: string, note = ''): Promise<void> {
+	await apiRequest(`/volunteer/signups/${encodeURIComponent(id)}/confirm`, {
+		method: 'POST',
+		body: { note: note || undefined }
+	});
+}
+
+export async function rejectVolunteerSignup(id: string, note: string): Promise<void> {
+	await apiRequest(`/volunteer/signups/${encodeURIComponent(id)}/reject`, {
+		method: 'POST',
+		body: { note }
+	});
+}
+
+/* — Recolecciones de material — */
+
+export interface CollectionInput {
+	material: string;
+	quantity: number;
+	unit: string;
+	collectedAt?: string;
+	rawMaterialProductId?: string;
+	notes?: string;
+}
+
+export async function getAdminCollections(
+	params: {
+		page?: number;
+		limit?: number;
+		material?: string;
+		activityId?: string;
+		rawMaterialProductId?: string;
+		from?: string;
+		to?: string;
+	} = {}
+): Promise<Paginated<AdminCollection>> {
+	const payload = await apiRequest(`/volunteer/admin/collections${query(params)}`);
+	return toPage(payload, normalizeAdminCollection);
+}
+
+export async function getCollectionSummary(
+	params: {
+		page?: number;
+		limit?: number;
+		material?: string;
+		activityId?: string;
+		rawMaterialProductId?: string;
+		from?: string;
+		to?: string;
+	} = {}
+): Promise<Paginated<CollectionSummaryRow>> {
+	const payload = await apiRequest(`/volunteer/admin/collections/summary${query(params)}`);
+	return toPage(payload, normalizeCollectionSummary);
+}
+
+export async function createCollection(activityId: string, input: CollectionInput): Promise<void> {
+	await apiRequest(`/volunteer/admin/activities/${encodeURIComponent(activityId)}/collections`, {
+		method: 'POST',
+		body: input
+	});
+}
+
+export async function updateCollection(id: string, input: Partial<CollectionInput>): Promise<void> {
+	await apiRequest(`/volunteer/admin/collections/${encodeURIComponent(id)}`, {
+		method: 'PATCH',
+		body: input
+	});
+}
+
+export async function unlinkCollection(id: string): Promise<void> {
+	await apiRequest(`/volunteer/admin/collections/${encodeURIComponent(id)}/unlink`, {
+		method: 'DELETE'
+	});
+}
+
+/* — Pagos — */
+
+export async function getAdminPayments(
+	params: { page?: number; limit?: number; status?: string } = {}
+): Promise<Paginated<AdminPayment>> {
+	const payload = await apiRequest(`/payments/admin/list${query(params)}`);
+	return toPage(payload, normalizeAdminPayment);
+}
+
+/* — Categorías — */
+
+export async function createProductCategory(input: {
+	name: string;
+	parentId?: string;
+	isActive?: boolean;
+}): Promise<void> {
+	await apiRequest('/product-categories', { method: 'POST', body: input });
+}
+
+export async function updateProductCategory(
+	id: string,
+	input: { name?: string; isActive?: boolean }
+): Promise<void> {
+	await apiRequest(`/product-categories/${encodeURIComponent(id)}`, {
+		method: 'PATCH',
+		body: input
+	});
+}
+
+export async function deactivateProductCategory(id: string): Promise<void> {
+	await apiRequest(`/product-categories/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/* — Notificaciones y difusión — */
+
+export interface BroadcastInput {
+	subject: string;
+	message: string;
+	link?: string;
+}
+
+export async function broadcastNotification(input: BroadcastInput): Promise<void> {
+	await apiRequest('/admin/notifications/broadcast', { method: 'POST', body: input });
+}
+
+export async function getAdminNotifications(
+	params: { page?: number; limit?: number; type?: string } = {}
+): Promise<Paginated<NotificationItem>> {
+	const payload = await apiRequest(`/notifications/admin/list${query(params)}`);
+	return toPage(payload, normalizeNotification);
+}
+
+export async function getAdminNotificationStats(): Promise<Record<string, unknown> | null> {
+	const payload = await apiRequest('/notifications/admin/stats');
+	return isRecord(payload) ? payload : null;
 }

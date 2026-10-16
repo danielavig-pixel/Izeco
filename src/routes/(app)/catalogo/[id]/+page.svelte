@@ -89,9 +89,9 @@
 	/>
 </svelte:head>
 
-<a class="back" href="/catalogo">
+<a class="back" href={product?.isRawMaterial ? '/materia-prima' : '/catalogo'}>
 	<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11 5 6 10l5 5" /></svg>
-	Volver al catálogo
+	{product?.isRawMaterial ? 'Volver a materia prima' : 'Volver al catálogo'}
 </a>
 
 {#if isLoading}
@@ -103,9 +103,14 @@
 	</div>
 {:else if product}
 	<header class="hero">
-		<p class="eyebrow">Catálogo · Compra con impacto</p>
+		<p class="eyebrow">
+			{product.isRawMaterial ? 'Materia prima · De la jornada a tu proceso' : 'Catálogo · Compra con impacto'}
+		</p>
 		<h1>{product.name}</h1>
 		<div class="tags">
+			{#if product.isRawMaterial}
+				<span class="tag">Materia prima</span>
+			{/if}
 			{#if categoryName}
 				<span class="tag">{categoryName}</span>
 			{/if}
