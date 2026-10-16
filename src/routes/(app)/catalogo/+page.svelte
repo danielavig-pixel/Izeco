@@ -167,7 +167,8 @@
 		buyingProductId = product.id;
 		try {
 			const session = await createProductCheckout(product);
-			window.location.href = session.checkoutUrl;
+			// La pasarela sandbox se resuelve en la propia app.
+			await goto(`/checkout/${session.paymentId}`);
 		} catch (error) {
 			buyError =
 				error instanceof ApiServiceError

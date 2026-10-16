@@ -72,7 +72,7 @@
 			</div>
 			<h1 id="password-title">Contraseña actualizada</h1>
 			<p class="description">Ya puedes iniciar sesión con tu nueva contraseña.</p>
-			<a class="submit-button" href="/">Volver a iniciar sesión</a>
+			<a class="submit-button" href="/iniciar-sesion">Volver a iniciar sesión</a>
 		{:else}
 			<div class="password-icon" aria-hidden="true">
 				<svg viewBox="0 0 40 40" fill="none">

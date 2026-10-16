@@ -56,7 +56,7 @@
 
 	onMount(() => {
 		if (!getAccessToken()) {
-			void goto('/');
+			void goto('/iniciar-sesion');
 			return;
 		}
 
@@ -66,7 +66,7 @@
 			if (session.expired) {
 				logout();
 				clearSession();
-				void goto('/');
+				void goto('/iniciar-sesion');
 			}
 		});
 		void refreshUnreadCount();
@@ -155,7 +155,7 @@
 		navOpen = false;
 		logout();
 		clearSession();
-		await goto('/');
+		await goto('/iniciar-sesion');
 	}
 </script>
 

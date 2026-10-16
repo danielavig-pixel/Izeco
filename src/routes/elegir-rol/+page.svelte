@@ -58,7 +58,7 @@
 
 	onMount(() => {
 		if (!getAccessToken()) {
-			void goto('/');
+			void goto('/iniciar-sesion');
 			return;
 		}
 

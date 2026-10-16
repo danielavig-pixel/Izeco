@@ -201,7 +201,7 @@
 		</form>
 
 		<p class="card-footer">
-			¿Ya tienes cuenta? <a href="/">Inicia sesión</a>
+			¿Ya tienes cuenta? <a href="/iniciar-sesion">Inicia sesión</a>
 		</p>
 	</section>
 </main>

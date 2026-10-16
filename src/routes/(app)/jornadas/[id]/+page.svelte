@@ -188,7 +188,7 @@
 
 				{#if !hasSession}
 					<p class="hint">Entra a tu cuenta para reservar un cupo en esta jornada.</p>
-					<button class="primary" type="button" onclick={() => goto('/')}>
+					<button class="primary" type="button" onclick={() => goto('/iniciar-sesion')}>
 						Iniciar sesión
 					</button>
 				{:else if mySignupStatus === 'confirmado'}

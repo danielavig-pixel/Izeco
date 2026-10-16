@@ -72,7 +72,7 @@
 			</button>
 		</form>
 
-		<a class="back-link" href="/">Volver a iniciar sesión</a>
+		<a class="back-link" href="/iniciar-sesion">Volver a iniciar sesión</a>
 	</section>
 </main>
 

@@ -46,6 +46,10 @@ export interface Payment {
 	currencyCode: string;
 	status: string;
 	description: string;
+	/** Referencia de la pasarela; el checkout sandbox la usa como identificador. */
+	externalRef?: string;
+	refundedAmountCents?: number;
+	confirmedAt?: string | null;
 	createdAt: string | null;
 }
 
@@ -359,6 +363,10 @@ function normalizePayment(raw: unknown): Payment | null {
 		currencyCode: pickString(raw, ['currencyCode', 'currency_code', 'currency']) || 'COP',
 		status: pickString(raw, ['status', 'state']).toLowerCase(),
 		description: pickString(raw, ['description', 'concept', 'title', 'reference']),
+		externalRef: pickString(raw, ['externalRef', 'external_ref']) || undefined,
+		refundedAmountCents:
+			pickNullableNumber(raw, ['refundedAmountCents', 'refunded_amount_cents', 'refundedCents']) ?? 0,
+		confirmedAt: pickDate(raw, ['confirmedAt', 'confirmed_at']),
 		createdAt: pickDate(raw, ['createdAt', 'created_at', 'date', 'paidAt'])
 	};
 }
@@ -727,6 +735,32 @@ export async function getMyPayments(
 	return toPage(payload, normalizePayment);
 }
 
+/** Detalle de un pago: lo ve el comprador, el vendedor o un admin. */
+export async function getPaymentById(id: string): Promise<Payment> {
+	const payload = await apiRequest(`/payments/${encodeURIComponent(id)}`);
+	const payment = normalizePayment(payload);
+	if (!payment) throw new ApiServiceError('No se pudo leer el pago.');
+	return payment;
+}
+
+/**
+ * Resuelve un pago pendiente en la pasarela simulada (sandbox): lo aprueba,
+ * rechaza o cancela como haría el PSP. Solo está disponible mientras la
+ * pasarela activa sea la "dummy"; con una pasarela real el servidor responde 403.
+ */
+export async function resolveSandboxPayment(
+	id: string,
+	outcome: 'approved' | 'rejected' | 'cancelled'
+): Promise<Payment> {
+	const payload = await apiRequest(`/payments/${encodeURIComponent(id)}/sandbox`, {
+		method: 'POST',
+		body: { outcome }
+	});
+	const payment = normalizePayment(payload);
+	if (!payment) throw new ApiServiceError('No se pudo resolver el pago.');
+	return payment;
+}
+
 /**
  * Intención de pago para un producto (checkout hosted). Devuelve la URL de la
  * pasarela a la que hay que redirigir al comprador. Requiere sesión.
@@ -750,8 +784,10 @@ function normalizeCheckout(raw: unknown): CheckoutSession | null {
 }
 
 /**
- * Crea la intención de pago de un producto en la pasarela y devuelve la URL
- * de checkout. El monto sale del precio del producto (nunca del cliente).
+ * Crea la intención de pago de un producto y devuelve la sesión de checkout.
+ * El monto sale del precio del producto (nunca del cliente). Con la pasarela
+ * sandbox, la app resuelve el pago en su propia página `/checkout/[id]`; con
+ * una pasarela real se redirige a `checkoutUrl`.
  */
 export async function createProductCheckout(product: Product): Promise<CheckoutSession> {
 	const payload = await apiRequest('/payments/checkout', {
@@ -765,7 +801,7 @@ export async function createProductCheckout(product: Product): Promise<CheckoutS
 		}
 	});
 	const session = normalizeCheckout(payload);
-	if (!session) throw new ApiServiceError('No se pudo iniciar el pago.');
+	if (!session || !session.paymentId) throw new ApiServiceError('No se pudo iniciar el pago.');
 	return session;
 }
 
