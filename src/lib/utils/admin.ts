@@ -121,6 +121,20 @@ function numericValue(value: unknown): number | null {
 	return null;
 }
 
+// Títulos de los grupos de /admin/overview. Las claves del API vienen sin
+// tildes ("campanas"), así que aquí se escriben correctamente en español.
+const GROUP_LABELS: Record<string, string> = {
+	usuarios: 'Usuarios',
+	emprendimientos: 'Emprendimientos',
+	productos: 'Productos',
+	materiaPrima: 'Materia prima',
+	campanas: 'Campañas',
+	voluntariados: 'Voluntariados',
+	inscripciones: 'Inscripciones',
+	notificaciones: 'Notificaciones',
+	dinero: 'Dinero'
+};
+
 /**
  * Describe la respuesta de /admin/overview como grupos de métricas. Un valor
  * numérico suelto se muestra como su propia tarjeta; un objeto anidado se
@@ -155,7 +169,7 @@ export function describeOverview(raw: Record<string, unknown> | null): MetricGro
 				});
 			}
 			if (metrics.length) {
-				groups.push({ key, label: humanizeKey(key), metrics });
+				groups.push({ key, label: GROUP_LABELS[key] ?? humanizeKey(key), metrics });
 			}
 		}
 	}
