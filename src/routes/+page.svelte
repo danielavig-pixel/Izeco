@@ -37,33 +37,9 @@
 
 <main class="login-page">
 	<section class="login-card" aria-labelledby="login-title">
-		<!-- LOGO: Este SVG está dibujado inline. Puedes reemplazarlo por una imagen guardada en src/lib/assets/. -->
-		<div class="brand-mark" aria-hidden="true">
-			<svg viewBox="0 0 92 68" fill="none">
-				<path d="M46 54V29" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-				<path
-					d="M46 39c-10 0-17-5-20-13 10-1 18 3 20 13Z"
-					fill="#70ad57"
-					stroke="#477e43"
-					stroke-width="1.5"
-					stroke-linejoin="round"
-				/>
-				<path
-					d="M46 32c1-9 8-15 18-16-1 9-7 15-18 16Z"
-					fill="#8fc668"
-					stroke="#477e43"
-					stroke-width="1.5"
-					stroke-linejoin="round"
-				/>
-				<path
-					d="M45 47c-8 0-13-4-16-10 8 0 14 3 16 10Zm3-6c2-8 8-12 16-12-2 7-7 12-16 12Z"
-					fill="#477e43"
-				/>
-				<path d="M38 55h16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-				<circle cx="24" cy="24" r="3" fill="#49382f" />
-				<circle cx="68" cy="24" r="3" fill="#49382f" />
-				<path d="m20 19 2-4m7 4 2-4M63 19l-2-4m7 4-2-4" stroke="#49382f" stroke-width="1.5" stroke-linecap="round" />
-			</svg>
+		<!-- LOGO: imagen real de la marca, servida desde static/logo.png. -->
+		<div class="brand-mark">
+			<img src="/logo.png" alt="Izeco" />
 		</div>
 
 		<header class="card-heading">
@@ -179,7 +155,10 @@
 		min-height: 100svh;
 		place-items: center;
 		padding: 24px 16px;
-		/* FONDO: Configura aquí background o background-image; la tarjeta conserva su propio estilo. */
+		/* FONDO: fotografía del paisaje con un velo verde para que la tarjeta resalte. */
+		background:
+			linear-gradient(180deg, rgb(23 53 42 / 35%), rgb(23 53 42 / 55%)),
+			url('/fondo.jpg') center / cover no-repeat;
 	}
 
 	.login-card {
@@ -199,8 +178,8 @@
 		color: #49382f;
 	}
 
-	.brand-mark svg {
-		width: 82px;
+	.brand-mark img {
+		width: auto;
 		height: 60px;
 	}
 
