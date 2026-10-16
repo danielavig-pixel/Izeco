@@ -186,6 +186,33 @@ export interface Entrepreneur {
 	createdAt: string | null;
 }
 
+/**
+ * Ficha propia del socio (GET /entrepreneurs/mine). Añade el estado de
+ * revisión y el motivo que dejó el admin al rechazar o suspender.
+ */
+export interface MyEntrepreneur extends Entrepreneur {
+	ownerId: string;
+	reviewNote: string;
+	updatedAt: string | null;
+}
+
+export interface EntrepreneurInput {
+	name: string;
+	description: string;
+	category?: string;
+	logoUrl?: string;
+	contactPhone?: string;
+	contactEmail?: string;
+}
+
+export interface EntrepreneurStatusLogEntry {
+	id: string;
+	toStatus: string;
+	actorRole: string;
+	note: string;
+	createdAt: string | null;
+}
+
 /* ------------------------------------------------------------------ */
 /* Utilidades                                                          */
 /* ------------------------------------------------------------------ */
@@ -524,6 +551,32 @@ function normalizeEntrepreneur(raw: unknown): Entrepreneur | null {
 		contactPhone: pickString(raw, ['contactPhone', 'contact_phone', 'phone']),
 		contactEmail: pickString(raw, ['contactEmail', 'contact_email', 'email']),
 		status: pickString(raw, ['status', 'state']).toLowerCase(),
+		createdAt: pickDate(raw, ['createdAt', 'created_at'])
+	};
+}
+
+/**
+ * Normaliza la vista del dueño (mine / por id). Reutiliza el normalizador
+ * público y añade los campos de revisión.
+ */
+function normalizeMyEntrepreneur(raw: unknown): MyEntrepreneur | null {
+	const base = normalizeEntrepreneur(raw);
+	if (!base || !isRecord(raw)) return null;
+	return {
+		...base,
+		ownerId: pickString(raw, ['ownerId', 'owner_id']),
+		reviewNote: pickString(raw, ['reviewNote', 'review_note']),
+		updatedAt: pickDate(raw, ['updatedAt', 'updated_at'])
+	};
+}
+
+function normalizeStatusLogEntry(raw: unknown): EntrepreneurStatusLogEntry | null {
+	if (!isRecord(raw)) return null;
+	return {
+		id: pickString(raw, ['id']),
+		toStatus: pickString(raw, ['toStatus', 'to_status', 'status']).toLowerCase(),
+		actorRole: pickString(raw, ['actorRole', 'actor_role']).toLowerCase(),
+		note: pickString(raw, ['note', 'reviewNote', 'review_note']),
 		createdAt: pickDate(raw, ['createdAt', 'created_at'])
 	};
 }
@@ -873,6 +926,76 @@ export async function getPublicEntrepreneurBySlug(slug: string): Promise<Entrepr
 	const entrepreneur = normalizeEntrepreneur(record);
 	if (!entrepreneur) throw new ApiServiceError('No se pudo leer este emprendimiento.', 404);
 	return entrepreneur;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mi emprendimiento (socio)                                           */
+/* ------------------------------------------------------------------ */
+
+function unwrapEntrepreneur(payload: unknown): unknown {
+	return isRecord(payload) && isRecord(payload.entrepreneur) ? payload.entrepreneur : payload;
+}
+
+/** Crea la ficha del socio. La API solo admite una por usuario. */
+export async function submitEntrepreneur(input: EntrepreneurInput): Promise<MyEntrepreneur> {
+	const payload = await apiRequest('/entrepreneurs', { method: 'POST', body: input });
+	const entrepreneur = normalizeMyEntrepreneur(unwrapEntrepreneur(payload));
+	if (!entrepreneur) throw new ApiServiceError('No se pudo leer el emprendimiento creado.');
+	return entrepreneur;
+}
+
+/** Mis fichas (paginado). La API devuelve una sola por socio. */
+export async function getMyEntrepreneurs(
+	params: { page?: number; limit?: number } = {}
+): Promise<Paginated<MyEntrepreneur>> {
+	const payload = await apiRequest(`/entrepreneurs/mine${query(params)}`);
+	return toPage(payload, normalizeMyEntrepreneur);
+}
+
+export async function getMyEntrepreneur(id: string): Promise<MyEntrepreneur> {
+	const payload = await apiRequest(`/entrepreneurs/${encodeURIComponent(id)}`);
+	const entrepreneur = normalizeMyEntrepreneur(unwrapEntrepreneur(payload));
+	if (!entrepreneur) throw new ApiServiceError('No se pudo leer este emprendimiento.', 404);
+	return entrepreneur;
+}
+
+export async function updateMyEntrepreneur(
+	id: string,
+	input: Partial<EntrepreneurInput>
+): Promise<MyEntrepreneur> {
+	const payload = await apiRequest(`/entrepreneurs/${encodeURIComponent(id)}`, {
+		method: 'PATCH',
+		body: input
+	});
+	const entrepreneur = normalizeMyEntrepreneur(unwrapEntrepreneur(payload));
+	if (!entrepreneur) throw new ApiServiceError('No se pudo guardar el emprendimiento.');
+	return entrepreneur;
+}
+
+/** Reenvía a revisión una ficha rechazada o suspendida. */
+export async function resubmitEntrepreneur(id: string): Promise<MyEntrepreneur> {
+	const payload = await apiRequest(`/entrepreneurs/${encodeURIComponent(id)}/resubmit`, {
+		method: 'POST'
+	});
+	const entrepreneur = normalizeMyEntrepreneur(unwrapEntrepreneur(payload));
+	if (!entrepreneur) throw new ApiServiceError('No se pudo reenviar el emprendimiento.');
+	return entrepreneur;
+}
+
+export async function getMyEntrepreneurHistory(
+	id: string
+): Promise<EntrepreneurStatusLogEntry[]> {
+	const payload = await apiRequest(`/entrepreneurs/${encodeURIComponent(id)}/history`);
+	const rawItems = Array.isArray(payload)
+		? payload
+		: isRecord(payload) && Array.isArray(payload.items)
+			? payload.items
+			: isRecord(payload) && Array.isArray(payload.history)
+				? payload.history
+				: [];
+	return rawItems
+		.map(normalizeStatusLogEntry)
+		.filter((entry): entry is EntrepreneurStatusLogEntry => entry !== null);
 }
 
 /* ------------------------------------------------------------------ */

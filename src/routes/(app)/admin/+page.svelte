@@ -119,6 +119,53 @@
 	</div>
 </section>
 
+<section class="ad-quick" aria-label="Acciones rápidas">
+	<a class="quick" href="/admin/materia-prima">
+		<span class="quick-icon" aria-hidden="true">
+			<svg viewBox="0 0 24 24"
+				><path d="M12 21c0-6 0-9 8-12 0 8-3 11-8 12Z" /><path
+					d="M12 21C12 14 10 9 4 6c-1 7 2 12 8 15Z"
+				/></svg
+			>
+		</span>
+		<span class="quick-body">
+			<strong>Publicar materia prima</strong>
+			<span>Crea, edita y publica el material recuperado que vendemos.</span>
+		</span>
+		<svg class="quick-arrow" viewBox="0 0 20 20" aria-hidden="true"
+			><path d="M5 15 15 5M8 5h7v7" /></svg
+		>
+	</a>
+	<a class="quick" href="/admin/emprendimientos">
+		<span class="quick-icon" aria-hidden="true">
+			<svg viewBox="0 0 24 24"
+				><path d="M4 9h16l-1 11H5L4 9Z" /><path d="M9 9V6a3 3 0 0 1 6 0v3" /></svg
+			>
+		</span>
+		<span class="quick-body">
+			<strong>Revisar emprendimientos</strong>
+			<span>Aprueba o rechaza las fichas de los socios.</span>
+		</span>
+		<svg class="quick-arrow" viewBox="0 0 20 20" aria-hidden="true"
+			><path d="M5 15 15 5M8 5h7v7" /></svg
+		>
+	</a>
+	<a class="quick" href="/admin/moderacion">
+		<span class="quick-icon" aria-hidden="true">
+			<svg viewBox="0 0 24 24"
+				><path d="M4 7h16v13H4z" /><path d="M4 7 12 3l8 4" /></svg
+			>
+		</span>
+		<span class="quick-body">
+			<strong>Moderar catálogo</strong>
+			<span>Revisa las artesanías que publican los socios.</span>
+		</span>
+		<svg class="quick-arrow" viewBox="0 0 20 20" aria-hidden="true"
+			><path d="M5 15 15 5M8 5h7v7" /></svg
+		>
+	</a>
+</section>
+
 {#if errorMessage}
 	<p class="ad-banner" role="alert">{errorMessage}</p>
 {/if}
@@ -193,6 +240,93 @@
 {/if}
 
 <style>
+	.ad-quick {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 14px;
+		margin: 20px 0 24px;
+	}
+
+	.quick {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 16px 18px;
+		border: 1px solid var(--iz-line);
+		border-radius: var(--iz-radius-md);
+		background: var(--iz-surface);
+		box-shadow: var(--iz-shadow-sm);
+		color: inherit;
+		text-decoration: none;
+		transition:
+			transform 160ms ease,
+			box-shadow 160ms ease,
+			border-color 160ms ease;
+	}
+
+	.quick:hover {
+		transform: translateY(-2px);
+		border-color: var(--iz-green-300);
+		box-shadow: var(--iz-shadow-md);
+	}
+
+	.quick-icon {
+		display: grid;
+		place-items: center;
+		width: 42px;
+		height: 42px;
+		flex: 0 0 auto;
+		border-radius: 12px;
+		background: var(--iz-green-100);
+	}
+
+	.quick-icon svg {
+		width: 22px;
+		height: 22px;
+		fill: none;
+		stroke: var(--iz-green-700);
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.6;
+	}
+
+	.quick-body {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		min-width: 0;
+	}
+
+	.quick-body strong {
+		color: var(--iz-ink);
+		font-size: 13.5px;
+		font-weight: 700;
+	}
+
+	.quick-body span {
+		color: var(--iz-muted);
+		font-size: 12px;
+		line-height: 1.45;
+	}
+
+	.quick-arrow {
+		width: 16px;
+		height: 16px;
+		flex: 0 0 auto;
+		margin-left: auto;
+		fill: none;
+		stroke: var(--iz-green-700);
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.7;
+	}
+
+	@media (max-width: 900px) {
+		.ad-quick {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
 	.chart-card {
 		margin-top: 20px;
 	}

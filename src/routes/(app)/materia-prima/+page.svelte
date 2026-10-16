@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
 		createProductCheckout,
@@ -6,6 +8,7 @@
 		ApiServiceError,
 		type Product
 	} from '#lib/services/api/api.service.js';
+	import { loadSession, session } from '#lib/services/api/session.svelte.js';
 	import { formatCurrency, toPlainText } from '#lib/utils/format.js';
 
 	const PAGE_SIZE = 12;
@@ -19,11 +22,25 @@
 	let totalPages = $state(1);
 	let buyingProductId = $state('');
 	let buyError = $state('');
+	let allowed = $state(false);
 
 	const searchTerm = $derived(page.url.searchParams.get('q') ?? '');
 
+	// Solo socios (emprendedor) y administradores ven la materia prima.
+	onMount(() => {
+		void loadSession().then(() => {
+			const role = session.user?.role;
+			if (role === 'emprendedor' || role === 'admin') {
+				allowed = true;
+			} else {
+				void goto('/dashboard');
+			}
+		});
+	});
+
 	// La grilla se recarga sola si la búsqueda del header navega con ?q=.
 	$effect(() => {
+		if (!allowed) return;
 		void loadProducts(searchTerm);
 	});
 
@@ -100,7 +117,8 @@
 	/>
 </svelte:head>
 
-<section class="hero">
+{#if allowed}
+	<section class="hero">
 	<div class="hero-copy">
 		<p class="hero-eyebrow">
 			<svg viewBox="0 0 24 24" aria-hidden="true"
@@ -234,6 +252,7 @@
 			{isLoadingMore ? 'Cargando…' : 'Cargar más materia prima'}
 		</button>
 	{/if}
+{/if}
 {/if}
 
 <style>

@@ -9,21 +9,34 @@ export const session = $state({
 	expired: false
 });
 
+// Promesa de la carga en curso. Sin esto, varios componentes que montan a la
+// vez (layout + página) pedirían el perfil por separado y los que esperan
+// "loadSession()" podrían resolver antes de tener el usuario, redirigiendo
+// de más (p. ej. el guard de /admin).
+let inflight: Promise<void> | null = null;
+
 export async function loadSession(force = false): Promise<void> {
-	if (!force && (session.status === 'loading' || session.status === 'ready')) return;
+	if (!force && session.status === 'ready') return;
+	if (!force && inflight) return inflight;
 
-	session.status = 'loading';
-	session.error = '';
-	session.expired = false;
+	inflight = (async () => {
+		session.status = 'loading';
+		session.error = '';
+		session.expired = false;
 
-	try {
-		session.user = await getMyProfile();
-		session.status = 'ready';
-	} catch (error) {
-		session.error = error instanceof Error ? error.message : 'No se pudo cargar tu perfil.';
-		session.status = 'error';
-		session.expired = error instanceof ApiServiceError && error.status === 401;
-	}
+		try {
+			session.user = await getMyProfile();
+			session.status = 'ready';
+		} catch (error) {
+			session.error = error instanceof Error ? error.message : 'No se pudo cargar tu perfil.';
+			session.status = 'error';
+			session.expired = error instanceof ApiServiceError && error.status === 401;
+		} finally {
+			inflight = null;
+		}
+	})();
+
+	return inflight;
 }
 
 export function clearSession(): void {

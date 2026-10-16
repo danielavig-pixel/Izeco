@@ -21,21 +21,26 @@
 
 	let { children } = $props();
 
-	const baseNavItems = [
+	const role = $derived(session.user?.role ?? '');
+
+	// Materia prima (la que vende la plataforma) la ven solo los socios
+	// (rol emprendedor) y los administradores.
+	const canSeeRawMaterials = $derived(role === 'emprendedor' || role === 'admin');
+
+	const navItems = $derived([
 		{ label: 'Inicio', href: '/dashboard', dot: false },
 		{ label: 'Catálogo', href: '/catalogo', dot: false },
-		{ label: 'Materia prima', href: '/materia-prima', dot: false },
+		...(canSeeRawMaterials
+			? [{ label: 'Materia prima', href: '/materia-prima', dot: false }]
+			: []),
 		{ label: 'Emprendimientos', href: '/emprendimientos', dot: false },
+		...(role === 'emprendedor'
+			? [{ label: 'Mi emprendimiento', href: '/mi-emprendimiento', dot: false }]
+			: []),
 		{ label: 'Campañas', href: '/campanas', dot: false },
-		{ label: 'Jornadas', href: '/jornadas', dot: false }
-	];
-
-	// El acceso al panel solo aparece para administradores.
-	const navItems = $derived(
-		session.user?.role === 'admin'
-			? [...baseNavItems, { label: 'Administración', href: '/admin', dot: false }]
-			: baseNavItems
-	);
+		{ label: 'Jornadas', href: '/jornadas', dot: false },
+		...(role === 'admin' ? [{ label: 'Administración', href: '/admin', dot: false }] : [])
+	]);
 
 	let isReady = $state(false);
 	let menuOpen = $state(false);
@@ -330,6 +335,7 @@
 	.header-inner {
 		display: flex;
 		max-width: 1480px;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 14px;
 		margin: 0 auto;
@@ -370,12 +376,20 @@
 	}
 
 	.main-nav {
+		flex: 1 1 max-content;
 		min-width: 0;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.main-nav::-webkit-scrollbar {
+		display: none;
 	}
 
 	.nav-track {
 		position: relative;
 		display: flex;
+		width: max-content;
 		align-items: center;
 		gap: 2px;
 		padding: 4px;
@@ -433,6 +447,7 @@
 
 	.header-tools {
 		display: flex;
+		flex: 0 0 auto;
 		align-items: center;
 		gap: 14px;
 		margin-left: auto;
