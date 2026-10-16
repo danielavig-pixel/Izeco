@@ -9,7 +9,7 @@ import { getAccessToken } from '../auth/auth.service.js';
  * formas de paginación ({ items } o array) y distintos nombres de campo.
  */
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://reseedb.vercel.app';
 
 export class ApiServiceError extends Error {
 	constructor(

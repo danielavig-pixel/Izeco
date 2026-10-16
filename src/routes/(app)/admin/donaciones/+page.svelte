@@ -101,12 +101,12 @@
 			<p class="ad-stat-value">{formatCurrency(stats.porCampanaCents)}</p>
 		</article>
 		<article class="ad-stat">
-			<p class="ad-stat-label">Confirmadas</p>
+			<p class="ad-stat-label">Aportes</p>
 			<p class="ad-stat-value">{stats.aprobadas.toLocaleString('es-CO')}</p>
-		</article>
-		<article class="ad-stat">
-			<p class="ad-stat-label">Pendientes</p>
-			<p class="ad-stat-value">{stats.pendientes.toLocaleString('es-CO')}</p>
+			<p class="ad-stat-hint">
+				{stats.pendientes.toLocaleString('es-CO')}
+				{stats.pendientes === 1 ? ' pendiente' : ' pendientes'}
+			</p>
 		</article>
 	</section>
 {/if}

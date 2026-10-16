@@ -62,7 +62,8 @@
 		}
 	}
 
-	const amountCents = $derived(Math.round((Number(amount.replace(/[^\d]/g, '')) || 0) * 100));
+	const amountDigits = $derived(String(amount ?? '').replace(/[^\d]/g, ''));
+	const amountCents = $derived((Number(amountDigits) || 0) * 100);
 
 	const destinationName = $derived(
 		destination
@@ -183,10 +184,9 @@
 						id="d-amount"
 						bind:this={amountInput}
 						bind:value={amount}
-						type="number"
+						type="text"
 						inputmode="numeric"
-						min="10"
-						step="1000"
+						autocomplete="off"
 						placeholder="25000"
 					/>
 					<span class="suffix">COP</span>

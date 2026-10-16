@@ -182,6 +182,12 @@
 	letter-spacing: -0.6px;
 }
 
+.ad-stat-hint {
+	margin: 4px 0 0;
+	color: var(--iz-muted);
+	font-size: 11.5px;
+}
+
 .ad-group {
 	margin-top: 20px;
 }
