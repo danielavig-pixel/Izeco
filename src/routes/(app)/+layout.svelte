@@ -159,10 +159,7 @@
 	<header class="app-header">
 		<div class="header-inner">
 			<a class="brand" href="/dashboard" aria-label="Izeco, ir al inicio">
-				<svg class="brand-leaf" viewBox="0 0 24 24" aria-hidden="true">
-					<path d="M12 21c0-6 0-9 8-12 0 8-3 11-8 12Z" />
-					<path d="M12 21C12 14 10 9 4 6c-1 7 2 12 8 15Z" />
-				</svg>
+				<img class="brand-logo" src="/logo.png" alt="" />
 				<span class="brand-name">Izeco</span>
 			</a>
 
@@ -351,14 +348,13 @@
 		text-decoration: none;
 	}
 
-	.brand-leaf {
-		width: 23px;
-		height: 23px;
-		fill: none;
-		stroke: var(--iz-green-600);
-		stroke-linecap: round;
-		stroke-linejoin: round;
-		stroke-width: 1.7;
+	.brand-logo {
+		width: auto;
+		height: 30px;
+		flex: 0 0 auto;
+		object-fit: contain;
+		/* El logo trae fondo blanco: se funde con el color de la barra. */
+		mix-blend-mode: multiply;
 	}
 
 	.brand-name {
