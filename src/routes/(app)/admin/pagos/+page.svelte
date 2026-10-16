@@ -93,7 +93,7 @@
 {:else if payments.length === 0}
 	<p class="ad-state">No hay pagos con esos filtros.</p>
 {:else}
-	<section class="ad-stats" style="margin-bottom: 16px;">
+	<section class="ad-stats" style="margin-bottom: 16px; max-width: 360px;">
 		<article class="ad-stat">
 			<p class="ad-stat-label">Aprobado en esta página</p>
 			<p class="ad-stat-value">{formatCurrency(approvedCents, payments[0]?.currencyCode ?? 'COP')}</p>

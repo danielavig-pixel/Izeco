@@ -153,10 +153,11 @@
 	margin-bottom: 14px;
 }
 
-/* Rejilla de métricas */
+/* Rejilla de métricas: auto-fit para que pocos indicadores llenen la fila
+   en vez de amontonarse a la izquierda. */
 .ad-stats {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 	gap: 12px;
 }
 
